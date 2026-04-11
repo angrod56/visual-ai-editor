@@ -1,14 +1,23 @@
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import path from 'path';
 import fs from 'fs/promises';
 import { FFmpegOperation } from '@/types';
 import { secondsToSrtTimestamp, safePath } from './utils';
 
-// Use bundled ffmpeg and ffprobe binaries
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-ffmpeg.setFfprobePath(ffprobeInstaller.path);
+// Lazy init — must not run at module load time (breaks Next.js build on Vercel)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _ffmpeg: any = null;
+function getFFmpeg() {
+  if (!_ffmpeg) {
+    _ffmpeg = require('fluent-ffmpeg');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+    _ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+    _ffmpeg.setFfprobePath(ffprobeInstaller.path);
+  }
+  return _ffmpeg;
+}
 
 export interface ExecuteResult {
   success: boolean;
@@ -66,7 +75,7 @@ async function executeSingleOperation(
   outputPath: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    let cmd = ffmpeg(inputPath);
+    let cmd = getFFmpeg()(inputPath);
 
     switch (op.command_type) {
       case 'trim': {
@@ -145,7 +154,8 @@ async function executeSingleOperation(
     cmd
       .output(outputPath)
       .on('end', () => resolve())
-      .on('error', (err) => reject(new Error(`FFmpeg error (step ${op.step}): ${err.message}`)))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on('error', (err: any) => reject(new Error(`FFmpeg error (step ${op.step}): ${err.message}`)))
       .run();
   });
 }
@@ -203,11 +213,14 @@ export async function probeVideo(
   audioCodec: string;
 }> {
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, metadata) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getFFmpeg().ffprobe(filePath, (err: any, metadata: any) => {
       if (err) return reject(new Error(`ffprobe error: ${err.message}`));
 
-      const videoStream = metadata.streams.find((s) => s.codec_type === 'video');
-      const audioStream = metadata.streams.find((s) => s.codec_type === 'audio');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const videoStream = metadata.streams.find((s: any) => s.codec_type === 'video');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const audioStream = metadata.streams.find((s: any) => s.codec_type === 'audio');
       const duration = metadata.format.duration ?? 0;
 
       // Parse FPS from r_frame_rate "30/1" or "30000/1001"

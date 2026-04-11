@@ -2,16 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { downloadToBuffer, uploadBuffer } from '@/lib/utils/storage';
 import { probeVideo } from '@/lib/ffmpeg/executor';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
-import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import fs from 'fs/promises';
 import path from 'path';
 
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-ffmpeg.setFfprobePath(ffprobeInstaller.path);
-
 export const maxDuration = 300;
+
+// Lazy init — must not run at module load time (breaks Next.js build on Vercel)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let ffmpeg: any = null;
+function getFFmpeg() {
+  if (!ffmpeg) {
+    ffmpeg = require('fluent-ffmpeg');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+    ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+    ffmpeg.setFfprobePath(ffprobeInstaller.path);
+  }
+  return ffmpeg;
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -95,13 +105,14 @@ export async function POST(request: NextRequest) {
 
 function extractFrame(inputPath: string, outputPath: string, timestamp: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
+    getFFmpeg()(inputPath)
       .seekInput(timestamp)
       .frames(1)
       .outputOptions(['-vf', 'scale=640:-1', '-q:v', '3'])
       .output(outputPath)
       .on('end', () => resolve())
-      .on('error', (err) => reject(new Error(`FFmpeg thumbnail: ${err.message}`)))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on('error', (err: any) => reject(new Error(`FFmpeg thumbnail: ${err.message}`)))
       .run();
   });
 }

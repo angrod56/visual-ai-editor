@@ -9,24 +9,32 @@ const nextConfig = {
       },
     ],
   },
+  // Prevent webpack from bundling native ffmpeg packages — they must be required at runtime
+  serverExternalPackages: [
+    'fluent-ffmpeg',
+    '@ffmpeg-installer/ffmpeg',
+    '@ffprobe-installer/ffprobe',
+  ],
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // fluent-ffmpeg uses these native modules; exclude them from webpack bundling
-      config.externals = [
-        ...(config.externals || []),
+      const FFMPEG_PACKAGES = [
         'fluent-ffmpeg',
         '@ffmpeg-installer/ffmpeg',
         '@ffprobe-installer/ffprobe',
       ];
+      // config.externals can be a function or array — handle both
+      const prev = config.externals ?? [];
+      config.externals = [
+        ...(Array.isArray(prev) ? prev : [prev]),
+        ({ request }, callback) => {
+          if (FFMPEG_PACKAGES.includes(request)) {
+            return callback(null, `commonjs ${request}`);
+          }
+          callback();
+        },
+      ];
     }
     return config;
-  },
-  experimental: {
-    serverComponentsExternalPackages: [
-      'fluent-ffmpeg',
-      '@ffmpeg-installer/ffmpeg',
-      '@ffprobe-installer/ffprobe',
-    ],
   },
 };
 
