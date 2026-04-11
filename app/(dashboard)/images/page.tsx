@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdScript, GeneratedImage } from '@/types';
 import { ScriptGenerator } from '@/components/images/ScriptGenerator';
 import { ImageGallery } from '@/components/images/ImageGallery';
-import { Wand2, Loader2, Sparkles } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, Upload, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,12 @@ export default function ImagesPage() {
   const [generating, setGenerating] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null); // base64
+  const [referencePreview, setReferencePreview] = useState<string | null>(null);
+  const [draggingOver, setDraggingOver] = useState(false);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [allProgress, setAllProgress] = useState<{ current: number; total: number } | null>(null);
 
   const generatorRef = useRef<HTMLDivElement>(null);
 
@@ -52,16 +58,55 @@ export default function ImagesPage() {
   const handleUseVisual = (script: AdScript) => {
     setPrompt(script.visual_description);
     generatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Auto-generate immediately with this script's visual description
+    generateImages(script.visual_description);
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) { toast.error('Escribe un prompt o genera scripts primero'); return; }
+  const compressImage = (file: File): Promise<{ base64: string; previewUrl: string }> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1024;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+          else { width = Math.round((width * MAX) / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        URL.revokeObjectURL(objectUrl);
+        resolve({ base64: dataUrl.split(',')[1], previewUrl: dataUrl });
+      };
+      img.onerror = reject;
+      img.src = objectUrl;
+    });
+  };
+
+  const handleReferenceFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Solo se aceptan imágenes'); return; }
+    try {
+      const { base64, previewUrl } = await compressImage(file);
+      setReferenceImage(base64);
+      setReferencePreview(previewUrl);
+    } catch {
+      toast.error('Error al procesar la imagen');
+    }
+  }, []);
+
+  const generateImages = async (promptOverride?: string) => {
+    const activePrompt = promptOverride ?? prompt;
+    if (!activePrompt.trim()) { toast.error('Escribe un prompt o genera scripts primero'); return; }
+    if (generating) return;
     setGenerating(true);
     try {
       const res = await fetch('/api/images/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, format, count, quality, provider }),
+        body: JSON.stringify({ prompt: activePrompt, format, count, quality, provider, reference_image: referenceImage ?? undefined }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al generar'); return; }
@@ -76,12 +121,41 @@ export default function ImagesPage() {
       if (failed > 0) {
         const reason = data.errors?.[0] ?? 'Error desconocido';
         toast.warning(`${failed} imagen${failed !== 1 ? 'es' : ''} falló: ${reason.slice(0, 120)}`);
-      };
+      }
     } catch {
       toast.error('Error de conexión');
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleGenerate = () => generateImages();
+
+  const handleGenerateAll = async (scripts: AdScript[]) => {
+    if (generatingAll || generating) return;
+    setGeneratingAll(true);
+    setAllProgress({ current: 0, total: scripts.length });
+    let totalGenerated = 0;
+    for (let i = 0; i < scripts.length; i++) {
+      setAllProgress({ current: i + 1, total: scripts.length });
+      try {
+        const res = await fetch('/api/images/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: scripts[i].visual_description,
+            format, count, quality, provider,
+            reference_image: referenceImage ?? undefined,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) totalGenerated += data.images?.length ?? 0;
+      } catch { /* continue with next */ }
+    }
+    await fetchImages();
+    toast.success(`${totalGenerated} imágenes generadas para ${scripts.length} scripts`);
+    setGeneratingAll(false);
+    setAllProgress(null);
   };
 
   const selectedFormat = FORMATS.find((f) => f.id === format)!;
@@ -109,7 +183,12 @@ export default function ImagesPage() {
             </div>
             <h2 className="text-sm font-semibold text-white">Genera tu script con IA</h2>
           </div>
-          <ScriptGenerator onUseVisual={handleUseVisual} />
+          <ScriptGenerator
+            onUseVisual={handleUseVisual}
+            onGenerateAll={handleGenerateAll}
+            generatingAll={generatingAll}
+            allProgress={allProgress}
+          />
         </div>
 
         {/* RIGHT: Image Generator */}
@@ -161,6 +240,70 @@ export default function ImagesPage() {
               placeholder="Describe la imagen que quieres generar, o usa el botón 'Usar descripción' de un script generado arriba..."
               rows={4}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-sky-500 transition-colors resize-none"
+            />
+          </div>
+
+          {/* Reference image */}
+          <div>
+            <label className="text-xs text-zinc-400 mb-1.5 flex items-center gap-1.5">
+              <User className="w-3 h-3" />
+              Imagen de referencia
+              <span className="text-zinc-600 font-normal">(opcional · humaniza el resultado)</span>
+            </label>
+
+            {referencePreview ? (
+              <div className="relative inline-flex">
+                <img
+                  src={referencePreview}
+                  alt="Referencia"
+                  className="h-20 w-20 object-cover rounded-xl border-2 border-sky-500/40"
+                />
+                <button
+                  onClick={() => { setReferenceImage(null); setReferencePreview(null); }}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-zinc-800 border border-zinc-600 rounded-full flex items-center justify-center hover:bg-red-900/40 hover:border-red-600 transition-colors"
+                >
+                  <X className="w-3 h-3 text-zinc-400" />
+                </button>
+                <div className="ml-3 flex flex-col justify-center gap-1">
+                  <p className="text-xs text-sky-300 font-medium">Referencia cargada</p>
+                  <p className="text-xs text-zinc-500">GPT-4 Vision analizará esta persona</p>
+                  <button
+                    onClick={() => referenceInputRef.current?.click()}
+                    className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-2 text-left"
+                  >
+                    Cambiar imagen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => referenceInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+                onDragLeave={() => setDraggingOver(false)}
+                onDrop={(e) => { e.preventDefault(); setDraggingOver(false); const f = e.dataTransfer.files[0]; if (f) handleReferenceFile(f); }}
+                className={cn(
+                  'w-full border-2 border-dashed rounded-xl px-4 py-3 flex items-center gap-3 transition-all text-left',
+                  draggingOver
+                    ? 'border-sky-500/60 bg-sky-500/10'
+                    : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/50 hover:bg-zinc-800'
+                )}
+              >
+                <div className="w-8 h-8 rounded-lg bg-zinc-700 flex items-center justify-center shrink-0">
+                  <Upload className="w-4 h-4 text-zinc-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-zinc-300">Subir foto de persona</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Arrastra o haz clic · JPG, PNG</p>
+                </div>
+              </button>
+            )}
+
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleReferenceFile(f); e.target.value = ''; }}
             />
           </div>
 

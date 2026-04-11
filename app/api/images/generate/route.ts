@@ -9,15 +9,38 @@ const DALLE_FORMATS: Record<string, { size: '1024x1024' | '1024x1792' | '1792x10
   landscape:  { size: '1792x1024',  width: 1792, height: 1024 },
 };
 
-async function generateWithDalle3(prompt: string, format: string, quality: string): Promise<Buffer> {
-  const OpenAI = (await import('openai')).default;
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+async function analyzeReferenceImage(openai: InstanceType<typeof import('openai').default>, base64: string): Promise<string> {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 300,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'image_url',
+          image_url: { url: `data:image/jpeg;base64,${base64}`, detail: 'low' },
+        },
+        {
+          type: 'text',
+          text: 'Describe this person for an AI image generation prompt. Include: approximate age range, gender presentation, skin tone (be specific: e.g. "warm medium-brown skin"), hair color and style, key facial features, body type, and clothing style. Be concise but precise. Output ONLY the description in English, no preamble.',
+        },
+      ],
+    }],
+  });
+  return response.choices[0]?.message?.content?.trim() ?? '';
+}
 
+async function generateWithDalle3(
+  openai: InstanceType<typeof import('openai').default>,
+  prompt: string,
+  format: string,
+  quality: string
+): Promise<Buffer> {
   const fmt = DALLE_FORMATS[format] ?? DALLE_FORMATS.square;
 
   const response = await openai.images.generate({
     model: 'dall-e-3',
-    prompt: `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, 8K quality, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated, not AI-looking.`,
+    prompt: `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, 8K quality, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated.`,
     size: fmt.size,
     quality: quality as 'standard' | 'hd',
     n: 1,
@@ -35,15 +58,32 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const { prompt, format = 'square', count = 2, provider = 'dalle3', topic, platform, script_data } = await request.json();
+  const { prompt, format = 'square', count = 2, provider = 'dalle3', topic, platform, script_data, reference_image } = await request.json();
   if (!prompt) return NextResponse.json({ error: 'prompt es requerido' }, { status: 400 });
+
+  const OpenAI = (await import('openai')).default;
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
   const batchSize = Math.min(Math.max(count, 1), 4);
   const quality = provider === 'dalle3hd' ? 'hd' : 'standard';
   const dimensions = { width: DALLE_FORMATS[format]?.width ?? 1024, height: DALLE_FORMATS[format]?.height ?? 1024 };
 
+  // If reference image provided, analyze it with GPT-4 Vision and enrich the prompt
+  let finalPrompt = prompt;
+  if (reference_image) {
+    try {
+      const personDescription = await analyzeReferenceImage(openai, reference_image);
+      if (personDescription) {
+        finalPrompt = `${prompt}. The main subject must closely resemble this real person: ${personDescription}. Maintain the exact same skin tone, hair, and facial characteristics. Ultra-realistic human appearance, not AI-generated looking.`;
+      }
+    } catch (err) {
+      console.error('[Vision] Failed to analyze reference image:', err);
+      // Continue without reference if analysis fails
+    }
+  }
+
   const results = await Promise.allSettled(
-    Array.from({ length: batchSize }, () => generateWithDalle3(prompt, format, quality))
+    Array.from({ length: batchSize }, () => generateWithDalle3(openai, finalPrompt, format, quality))
   );
 
   const buffers = results.filter((r): r is PromiseFulfilledResult<Buffer> => r.status === 'fulfilled').map((r) => r.value);
@@ -62,7 +102,7 @@ export async function POST(request: NextRequest) {
       .from('generated_images')
       .insert({
         user_id: user.id,
-        prompt,
+        prompt: finalPrompt,
         topic: topic ?? null,
         platform: platform ?? null,
         format,
@@ -70,7 +110,7 @@ export async function POST(request: NextRequest) {
         height: dimensions.height,
         storage_path: storagePath,
         script_data: script_data ?? null,
-        model: `dall-e-3-${quality}`,
+        model: `dall-e-3-${quality}${reference_image ? '-ref' : ''}`,
         status: 'completed',
       })
       .select()

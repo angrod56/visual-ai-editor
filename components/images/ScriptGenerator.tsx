@@ -13,6 +13,9 @@ const TONES = ['Profesional', 'Urgencia', 'Aspiracional', 'Emocional', 'Educativ
 
 interface Props {
   onUseVisual: (script: AdScript) => void;
+  onGenerateAll?: (scripts: AdScript[]) => void;
+  generatingAll?: boolean;
+  allProgress?: { current: number; total: number } | null;
 }
 
 function TagInput({
@@ -74,7 +77,7 @@ function TagInput({
   );
 }
 
-export function ScriptGenerator({ onUseVisual }: Props) {
+export function ScriptGenerator({ onUseVisual, onGenerateAll, generatingAll, allProgress }: Props) {
   const [topic, setTopic] = useState('');
   const [niche, setNiche] = useState('');
   const [audience, setAudience] = useState('');
@@ -221,7 +224,29 @@ export function ScriptGenerator({ onUseVisual }: Props) {
       {/* Scripts */}
       {scripts.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider">Scripts generados</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider">Scripts generados</p>
+            {onGenerateAll && (
+              <Button
+                size="sm"
+                onClick={() => onGenerateAll(scripts)}
+                disabled={generatingAll}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-semibold gap-1.5 text-xs h-7 px-3"
+              >
+                {generatingAll ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    {allProgress ? `${allProgress.current}/${allProgress.total} scripts...` : 'Generando...'}
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="w-3 h-3" />
+                    Generar imágenes para todos
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           {scripts.map((script) => {
             const isOpen = expanded === script.id;
             return (

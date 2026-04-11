@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Film, Settings, Sparkles, ImagePlus } from 'lucide-react';
+import { Film, Settings, Sparkles, ImagePlus, Layout } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const videoItems = [
@@ -11,6 +11,7 @@ const videoItems = [
 
 const imageItems = [
   { href: '/images', label: 'Imágenes IA', icon: ImagePlus },
+  { href: '/carousels', label: 'Carruseles', icon: Layout },
 ];
 
 const bottomItems = [
