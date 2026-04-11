@@ -10,6 +10,7 @@ import { TranscriptionPanel } from '@/components/editor/TranscriptionPanel';
 import { OperationHistory } from '@/components/editor/OperationHistory';
 import { ExportPanel } from '@/components/editor/ExportPanel';
 import { ProcessingStatus } from '@/components/editor/ProcessingStatus';
+import { ViralClipsPanel } from '@/components/editor/ViralClipsPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Info, RefreshCw } from 'lucide-react';
@@ -259,6 +260,14 @@ export default function ProjectEditorPage() {
 
           {/* Center column: Instruction + Status + History */}
           <div className="lg:col-span-5 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <ViralClipsPanel
+                projectId={id}
+                projectReady={isReady}
+                onClipsStarted={(ids) => ids.forEach(handleOperationStarted)}
+              />
+            </div>
+
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">Editar con IA</h3>
               <EditOptions
