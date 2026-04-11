@@ -15,6 +15,14 @@ const nextConfig = {
     '@ffmpeg-installer/ffmpeg',
     '@ffprobe-installer/ffprobe',
   ],
+  // Tell Vercel's file tracer to include ffmpeg/ffprobe binaries in the deployment bundle
+  experimental: {
+    outputFileTracingIncludes: {
+      '/api/process/metadata': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
+      '/api/process/transcribe': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
+      '/api/edit/[id]/process': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
+    },
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       const FFMPEG_PACKAGES = [
@@ -22,7 +30,6 @@ const nextConfig = {
         '@ffmpeg-installer/ffmpeg',
         '@ffprobe-installer/ffprobe',
       ];
-      // config.externals can be a function or array — handle both
       const prev = config.externals ?? [];
       config.externals = [
         ...(Array.isArray(prev) ? prev : [prev]),
