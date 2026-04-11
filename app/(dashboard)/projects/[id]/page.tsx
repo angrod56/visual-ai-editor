@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Info, RefreshCw } from 'lucide-react';
 import { formatDuration } from '@/lib/utils/video';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 
 export default function ProjectEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -76,7 +77,8 @@ export default function ProjectEditorPage() {
 
   const handleOperationStarted = useCallback((operationId: string) => {
     setActiveOperationIds((prev) => [...prev, operationId]);
-    refreshOperations();
+    // Realtime subscription will pick up the INSERT — also do a quick fetch as fallback
+    setTimeout(refreshOperations, 800);
   }, [refreshOperations]);
 
   const handleOperationCompleted = useCallback(() => {
@@ -92,6 +94,42 @@ export default function ProjectEditorPage() {
     setOperations((prev) => prev.filter((op) => op.id !== opId));
     setActiveOperationIds((prev) => prev.filter((id) => id !== opId));
   }, []);
+
+  // Realtime subscription: reflect INSERT/UPDATE on edit_operations instantly
+  useEffect(() => {
+    if (!id) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`ops:${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'edit_operations', filter: `project_id=eq.${id}` },
+        (payload) => {
+          const op = payload.new as EditOperation;
+          if (deletedOpIds.current.has(op.id)) return;
+          setOperations((prev) => prev.some((o) => o.id === op.id) ? prev : [...prev, op]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'edit_operations', filter: `project_id=eq.${id}` },
+        (payload) => {
+          const op = payload.new as EditOperation;
+          if (deletedOpIds.current.has(op.id)) return;
+          setOperations((prev) => prev.map((o) => o.id === op.id ? op : o));
+          // When completed, refresh exports list
+          if (op.status === 'completed') {
+            fetch(`/api/projects/${id}/exports`)
+              .then((r) => r.json())
+              .then(setExports)
+              .catch(() => {});
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
 
   const handleRetryTranscription = async () => {
     if (!id || retrying) return;
