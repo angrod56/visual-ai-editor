@@ -27,6 +27,7 @@ export default function ProjectEditorPage() {
   const [activeOperationIds, setActiveOperationIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const deletedOpIds = useRef<Set<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -61,27 +62,32 @@ export default function ProjectEditorPage() {
     }
   };
 
-  const handleOperationStarted = useCallback((operationId: string) => {
-    setActiveOperationIds((prev) => [...prev, operationId]);
-    // Refresh operations list
+  const refreshOperations = useCallback(() => {
     fetch(`/api/projects/${id}/operations`)
       .then((r) => r.json())
-      .then(setOperations)
+      .then((ops: EditOperation[]) =>
+        setOperations(ops.filter((op) => !deletedOpIds.current.has(op.id)))
+      )
       .catch(() => {});
   }, [id]);
 
+  const handleOperationStarted = useCallback((operationId: string) => {
+    setActiveOperationIds((prev) => [...prev, operationId]);
+    refreshOperations();
+  }, [refreshOperations]);
+
   const handleOperationCompleted = useCallback(() => {
-    // Refresh exports list
     fetch(`/api/projects/${id}/exports`)
       .then((r) => r.json())
       .then(setExports)
       .catch(() => {});
-    // Refresh operations
-    fetch(`/api/projects/${id}/operations`)
-      .then((r) => r.json())
-      .then(setOperations)
-      .catch(() => {});
-  }, [id]);
+    refreshOperations();
+  }, [id, refreshOperations]);
+
+  const handleOperationDeleted = useCallback((opId: string) => {
+    deletedOpIds.current.add(opId);
+    setOperations((prev) => prev.filter((op) => op.id !== opId));
+  }, []);
 
   const handleRetryTranscription = async () => {
     if (!id || retrying) return;
@@ -233,7 +239,7 @@ export default function ProjectEditorPage() {
               <h3 className="text-sm font-semibold text-white mb-3">Historial de ediciones</h3>
               <OperationHistory
                 operations={operations}
-                onDeleted={(id) => setOperations((prev) => prev.filter((op) => op.id !== id))}
+                onDeleted={handleOperationDeleted}
               />
             </div>
           </div>
