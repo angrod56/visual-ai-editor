@@ -155,6 +155,36 @@ export interface EditPreset {
   created_at: string;
 }
 
+// ─── Image Generation ─────────────────────────────────────────────────────────
+
+export interface AdScript {
+  id: number;
+  hook: string;
+  body: string;
+  cta: string;
+  hashtags: string[];
+  visual_description: string;
+}
+
+export type ImageFormat = 'square' | 'portrait' | 'landscape';
+
+export interface GeneratedImage {
+  id: string;
+  user_id: string;
+  prompt: string;
+  topic: string | null;
+  platform: string | null;
+  format: ImageFormat;
+  width: number;
+  height: number;
+  storage_path: string;
+  script_data: AdScript | null;
+  model: string;
+  status: string;
+  created_at: string;
+  signed_url?: string;
+}
+
 // ─── API Response types ────────────────────────────────────────────────────────
 
 export interface UploadResponse {

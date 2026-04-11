@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { EditOperation, EditPlan } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle, Send } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle, Send, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -43,6 +43,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [clarifications, setClarifications] = useState<Record<string, string>>({});
   const [replying, setReplying] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
 
   const handleDelete = async (e: React.MouseEvent, opId: string) => {
     e.stopPropagation();
@@ -77,6 +78,25 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
       toast.error('Error de conexión');
     } finally {
       setCancelling(null);
+    }
+  };
+
+  const handleRetry = async (e: React.MouseEvent, op: EditOperation) => {
+    e.stopPropagation();
+    setRetrying(op.id);
+    try {
+      // Reset status back to pending so the process route will claim it
+      const res = await fetch(`/api/operations/${op.id}/retry`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al reintentar'); return; }
+      onOperationStarted?.(op.id);
+      // Fire process endpoint
+      fetch(`/api/edit/${op.id}/process`, { method: 'POST', keepalive: true }).catch(() => {});
+      toast.success('Reintentando operación...');
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setRetrying(null);
     }
   };
 
@@ -122,6 +142,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
           const plan = op.ai_interpretation as EditPlan;
           const isExpanded = expanded === op.id || op.status === 'needs_clarification';
           const canDelete = op.status === 'failed' || op.status === 'needs_clarification';
+          const canRetry = op.status === 'failed';
           const canCancel = op.status === 'pending' || op.status === 'processing';
 
           return (
@@ -167,6 +188,17 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                     >
                       <StopCircle className={cn('w-3.5 h-3.5', cancelling === op.id && 'animate-spin')} />
                       Detener
+                    </button>
+                  )}
+                  {canRetry && (
+                    <button
+                      onClick={(e) => handleRetry(e, op)}
+                      disabled={retrying === op.id}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-amber-400 hover:bg-amber-900/20 rounded transition-colors"
+                      title="Reintentar"
+                    >
+                      <RotateCcw className={cn('w-3.5 h-3.5', retrying === op.id && 'animate-spin')} />
+                      Reintentar
                     </button>
                   )}
                   {canDelete && (

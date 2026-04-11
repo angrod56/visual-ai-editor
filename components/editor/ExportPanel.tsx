@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { VideoExport } from '@/types';
 import { formatFileSize, formatDuration } from '@/lib/utils/video';
-import { Download, FileVideo, Film, Headphones, Zap, Play, X, Loader2, Trash2 } from 'lucide-react';
+import { Download, FileVideo, Film, Headphones, Zap, Play, X, Loader2, Trash2, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -45,6 +45,7 @@ interface PreviewState {
 export function ExportPanel({ exports, onDeleted }: Props) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
 
@@ -100,6 +101,21 @@ export function ExportPanel({ exports, onDeleted }: Props) {
       toast.error('Error al descargar');
     } finally {
       setDownloading(null);
+    }
+  };
+
+  const handleShare = async (exp: VideoExport) => {
+    setSharing(exp.id);
+    try {
+      const url = await fetchSignedUrl(exp.id);
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copiado al portapapeles', {
+        description: 'Válido por 1 hora',
+      });
+    } catch {
+      toast.error('No se pudo copiar el link');
+    } finally {
+      setSharing(null);
     }
   };
 
@@ -162,6 +178,19 @@ export function ExportPanel({ exports, onDeleted }: Props) {
                     {loadingPreview === exp.id
                       ? <Loader2 className="w-4 h-4 animate-spin" />
                       : <Play className="w-4 h-4" />
+                    }
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleShare(exp)}
+                    disabled={sharing === exp.id}
+                    title="Compartir link"
+                    className="text-zinc-400 hover:text-sky-400 hover:bg-sky-900/20 px-2"
+                  >
+                    {sharing === exp.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Share2 className="w-4 h-4" />
                     }
                   </Button>
                   <Button
