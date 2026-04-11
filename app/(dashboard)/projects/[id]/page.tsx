@@ -30,6 +30,7 @@ export default function ProjectEditorPage() {
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
   const deletedOpIds = useRef<Set<string>>(new Set());
+  const deletedExportIds = useRef<Set<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -61,7 +62,10 @@ export default function ProjectEditorPage() {
         const ops: EditOperation[] = await opsRes.json();
         setOperations(ops.filter((op) => !deletedOpIds.current.has(op.id)));
       }
-      if (exportsRes.ok) setExports(await exportsRes.json());
+      if (exportsRes.ok) {
+        const exps: VideoExport[] = await exportsRes.json();
+        setExports(exps.filter((e) => !deletedExportIds.current.has(e.id)));
+      }
     } finally {
       setLoading(false);
     }
@@ -85,7 +89,9 @@ export default function ProjectEditorPage() {
   const handleOperationCompleted = useCallback(() => {
     fetch(`/api/projects/${id}/exports`)
       .then((r) => r.json())
-      .then(setExports)
+      .then((exps: VideoExport[]) =>
+        setExports(exps.filter((e) => !deletedExportIds.current.has(e.id)))
+      )
       .catch(() => {});
     refreshOperations();
   }, [id, refreshOperations]);
@@ -97,6 +103,7 @@ export default function ProjectEditorPage() {
   }, []);
 
   const handleExportDeleted = useCallback((exportId: string) => {
+    deletedExportIds.current.add(exportId);
     setExports((prev) => prev.filter((e) => e.id !== exportId));
   }, []);
 
@@ -126,7 +133,9 @@ export default function ProjectEditorPage() {
           if (op.status === 'completed') {
             fetch(`/api/projects/${id}/exports`)
               .then((r) => r.json())
-              .then(setExports)
+              .then((exps: VideoExport[]) =>
+                setExports(exps.filter((e) => !deletedExportIds.current.has(e.id)))
+              )
               .catch(() => {});
           }
         }
