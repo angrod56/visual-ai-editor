@@ -17,25 +17,42 @@ const GEMINI_DIMENSIONS: Record<string, { width: number; height: number }> = {
   landscape:  { width: 1792, height: 1024 },
 };
 
-// Generate one image with Gemini 2.0 Flash image generation
+const GEMINI_IMAGE_MODELS = [
+  'gemini-2.0-flash-preview-image-generation',
+  'gemini-2.0-flash-exp',
+];
+
 async function generateOneWithGemini(prompt: string): Promise<Buffer | null> {
   const { GoogleGenAI } = await import('@google/genai');
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash-preview-image-generation',
-    contents: `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, 8K quality, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated, not AI-looking.`,
-    config: {
-      responseModalities: ['IMAGE'],
-    },
-  });
+  const fullPrompt = `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated, not AI-looking.`;
 
-  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
-    if (part.inlineData?.data) {
-      return Buffer.from(part.inlineData.data, 'base64');
+  let lastError: unknown;
+  for (const model of GEMINI_IMAGE_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: fullPrompt,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
+      });
+
+      for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+        if (part.inlineData?.data) {
+          return Buffer.from(part.inlineData.data, 'base64');
+        }
+      }
+      // Response came back but no image — log for debugging
+      console.warn(`[Gemini] Model ${model} returned no image. Candidates:`, JSON.stringify(response.candidates?.map(c => c.content?.parts?.map(p => ({ type: p.inlineData ? 'image' : 'text', text: p.text?.slice(0, 80) })))));
+    } catch (err) {
+      console.warn(`[Gemini] Model ${model} failed:`, err);
+      lastError = err;
     }
   }
-  return null;
+
+  throw lastError ?? new Error('Gemini: no image returned from any model');
 }
 
 async function sleep(ms: number) {
