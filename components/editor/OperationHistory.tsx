@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { EditOperation, EditPlan } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -40,6 +40,7 @@ interface Props {
 export function OperationHistory({ operations, onDeleted }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   const handleDelete = async (e: React.MouseEvent, opId: string) => {
     e.stopPropagation();
@@ -56,6 +57,23 @@ export function OperationHistory({ operations, onDeleted }: Props) {
       toast.error('Error de conexión');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleCancel = async (e: React.MouseEvent, opId: string) => {
+    e.stopPropagation();
+    setCancelling(opId);
+    try {
+      const res = await fetch(`/api/operations/${opId}/cancel`, { method: 'POST' });
+      if (res.ok) {
+        toast.success('Operación cancelada');
+      } else {
+        toast.error('Error al cancelar');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setCancelling(null);
     }
   };
 
@@ -76,6 +94,7 @@ export function OperationHistory({ operations, onDeleted }: Props) {
           const plan = op.ai_interpretation as EditPlan;
           const isExpanded = expanded === op.id;
           const canDelete = op.status === 'failed' || op.status === 'needs_clarification';
+          const canCancel = op.status === 'pending' || op.status === 'processing';
 
           return (
             <div
@@ -99,6 +118,16 @@ export function OperationHistory({ operations, onDeleted }: Props) {
                 <Badge className={cn('shrink-0 text-xs border', STATUS_COLORS[op.status])}>
                   {STATUS_LABELS[op.status]}
                 </Badge>
+                {canCancel && (
+                  <button
+                    onClick={(e) => handleCancel(e, op.id)}
+                    disabled={cancelling === op.id}
+                    className="p-1 text-slate-500 hover:text-orange-400 transition-colors shrink-0"
+                    title="Detener"
+                  >
+                    <StopCircle className={cn('w-3.5 h-3.5', cancelling === op.id && 'animate-spin')} />
+                  </button>
+                )}
                 {canDelete && (
                   <button
                     onClick={(e) => handleDelete(e, op.id)}
