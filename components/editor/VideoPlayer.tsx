@@ -23,6 +23,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
   const [played, setPlayed] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   useImperativeHandle(ref, () => ({
     seekTo(seconds: number) {
@@ -84,8 +85,19 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
           onEnded={() => setPlaying(false)}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
+          onError={(e) => {
+            const v = e.currentTarget;
+            const code = v.error?.code ?? 0;
+            const msg = v.error?.message ?? 'desconocido';
+            setVideoError(`Error ${code}: ${msg} — src: ${v.currentSrc}`);
+          }}
           playsInline
         />
+        {videoError && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4">
+            <p className="text-red-400 text-xs text-center break-all">{videoError}</p>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
