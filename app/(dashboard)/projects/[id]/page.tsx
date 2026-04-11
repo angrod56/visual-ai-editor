@@ -250,7 +250,7 @@ export default function ProjectEditorPage() {
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               {videoUrl ? (
-                <VideoPlayer ref={playerRef} url={videoUrl} title={project.original_filename} />
+                <VideoPlayer ref={playerRef} url={videoUrl} title={project.original_filename} segments={segments} />
               ) : (
                 <div className="aspect-video bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-500 text-sm">
                   {isReady ? 'Cargando reproductor...' : 'Video procesándose...'}

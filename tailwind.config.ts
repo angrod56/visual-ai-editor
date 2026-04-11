@@ -52,6 +52,15 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
+      keyframes: {
+        'subtitle-pop': {
+          '0%': { opacity: '0', transform: 'scale(0.85) translateY(6px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+      },
+      animation: {
+        'subtitle-pop': 'subtitle-pop 0.15s ease-out forwards',
+      },
     },
   },
   plugins: [],
