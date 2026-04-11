@@ -86,6 +86,8 @@ export type FFmpegCommandType =
   | 'subtitle'
   | 'speed'
   | 'resize'
+  | 'crop'
+  | 'silence_remove'
   | 'audio_extract'
   | 'overlay'
   | 'filter';

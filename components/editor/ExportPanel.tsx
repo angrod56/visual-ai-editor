@@ -26,7 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
   reel: 'Reel',
   summary: 'Resumen',
   subtitled: 'Con subtítulos',
-  audio: 'Audio',
+  audio: 'Audio MP3',
   resized: 'Redimensionado',
 };
 
@@ -58,7 +58,7 @@ export function ExportPanel({ exports }: Props) {
     return (
       <div className="text-center py-8 text-slate-500 text-sm space-y-1">
         <FileVideo className="w-8 h-8 mx-auto text-slate-700 mb-2" />
-        <p>No hay exports aún.</p>
+        <p>No hay exportaciones aún.</p>
         <p className="text-xs">Los videos editados aparecerán aquí.</p>
       </div>
     );

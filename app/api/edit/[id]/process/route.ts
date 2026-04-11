@@ -110,9 +110,14 @@ export async function POST(
     }
 
     // 6. Upload result to R2
-    const outputKey = buildExportPath(user.id, operationId);
-    const outputBuffer = await fs.readFile(result.outputPath);
-    await uploadBuffer(outputBuffer, outputKey, 'video/mp4');
+    const isAudio = result.outputPath?.endsWith('.mp3') || result.outputPath?.endsWith('.aac') || result.outputPath?.endsWith('.wav');
+    const outputExt = isAudio ? (result.outputPath!.split('.').pop() ?? 'mp3') : 'mp4';
+    const outputKey = isAudio
+      ? `exports/${user.id}/${operationId}/output.${outputExt}`
+      : buildExportPath(user.id, operationId);
+    const contentType = isAudio ? `audio/${outputExt}` : 'video/mp4';
+    const outputBuffer = await fs.readFile(result.outputPath!);
+    await uploadBuffer(outputBuffer, outputKey, contentType);
 
     // 7. Create export record
     const { data: exportRecord } = await supabase

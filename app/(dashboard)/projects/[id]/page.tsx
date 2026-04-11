@@ -186,7 +186,7 @@ export default function ProjectEditorPage() {
           className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
         >
           <Info className="w-4 h-4" />
-          Ver exports
+          Ver exportaciones
         </Link>
       </div>
 
@@ -252,7 +252,7 @@ export default function ProjectEditorPage() {
           <div className="lg:col-span-3">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">
-                Exports ({exports.length})
+                Exportaciones ({exports.length})
               </h3>
               <ExportPanel exports={exports} />
             </div>

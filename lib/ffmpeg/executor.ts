@@ -103,6 +103,70 @@ async function executeSingleOperation(
         break;
       }
 
+      case 'crop': {
+        // Center-crop to a target aspect ratio (e.g. 9:16 for vertical video).
+        // Parameters: target_width, target_height (the desired aspect dimensions, e.g. 9 and 16)
+        // or width/height as actual pixel dimensions.
+        const params = op.parameters as {
+          target_width?: number;
+          target_height?: number;
+          width?: number;
+          height?: number;
+        };
+        if (params.width && params.height) {
+          // Absolute pixel dimensions: scale to fill then crop center
+          const w = params.width;
+          const h = params.height;
+          cmd = cmd
+            .videoFilters(
+              `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}`
+            )
+            .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+        } else {
+          // Ratio crop (default: 9:16 vertical)
+          const tw = params.target_width ?? 9;
+          const th = params.target_height ?? 16;
+          // Crop to ratio from center: keep full height, crop width
+          cmd = cmd
+            .videoFilters(
+              `crop=ih*${tw}/${th}:ih:(iw-ih*${tw}/${th})/2:0`
+            )
+            .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+        }
+        break;
+      }
+
+      case 'silence_remove': {
+        // Remove silent gaps using transcription segments (spoken parts).
+        // Parameters: segments = [{start: number, end: number}], padding_seconds (optional)
+        const { segments = [], padding_seconds = 0.1 } = op.parameters as {
+          segments: Array<{ start: number; end: number }>;
+          padding_seconds?: number;
+        };
+
+        if (segments.length === 0) {
+          // Fallback: just copy the video unchanged
+          cmd = cmd.outputOptions(['-c copy']);
+        } else {
+          // Build select expression for video and audio
+          const selectExpr = segments
+            .map((s) => {
+              const t0 = Math.max(0, s.start - padding_seconds).toFixed(3);
+              const t1 = (s.end + padding_seconds).toFixed(3);
+              return `between(t,${t0},${t1})`;
+            })
+            .join('+');
+
+          cmd = cmd
+            .complexFilter([
+              `[0:v]select='${selectExpr}',setpts=N/FRAME_RATE/TB[v]`,
+              `[0:a]aselect='${selectExpr}',asetpts=N/SR/TB[a]`,
+            ])
+            .outputOptions(['-map [v]', '-map [a]', '-preset ultrafast', '-crf 28']);
+        }
+        break;
+      }
+
       case 'audio_extract': {
         const { format = 'mp3' } = op.parameters as { format?: string };
         cmd = cmd

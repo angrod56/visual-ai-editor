@@ -8,6 +8,8 @@ const FFmpegCommandTypeSchema = z.enum([
   'subtitle',
   'speed',
   'resize',
+  'crop',
+  'silence_remove',
   'audio_extract',
   'overlay',
   'filter',

@@ -33,7 +33,7 @@ export default function ExportsPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white">Historial de Exports</h1>
+          <h1 className="text-xl font-bold text-white">Historial de Exportaciones</h1>
           {project && (
             <p className="text-sm text-slate-400">{project.title}</p>
           )}
@@ -49,7 +49,7 @@ export default function ExportsPage() {
       ) : exports.length === 0 ? (
         <div className="text-center py-16 text-slate-500">
           <Download className="w-10 h-10 mx-auto text-slate-700 mb-3" />
-          <p>No hay exports para este proyecto.</p>
+          <p>No hay exportaciones para este proyecto.</p>
           <Link href={`/projects/${id}`} className="text-purple-400 text-sm hover:underline mt-2 block">
             Ir al editor
           </Link>
