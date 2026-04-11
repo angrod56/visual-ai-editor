@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import JSZip from 'jszip';
 
 const PLATFORMS = ['Instagram', 'LinkedIn', 'Facebook', 'Twitter/X'];
 const TONES = ['Educativo', 'Inspirador', 'Tips prácticos', 'Historia', 'Ventas'];
@@ -278,12 +279,33 @@ export default function CarouselsPage() {
   const downloadAll = async () => {
     if (!slides.length) return;
     setDownloading(true);
-    toast.info(`Descargando ${slides.length} diapositivas…`);
-    for (let i = 0; i < slides.length; i++) {
-      await new Promise<void>((resolve) => setTimeout(() => { downloadOne(i); resolve(); }, i * 350));
+    const toastId = toast.loading(`Preparando ZIP (0/${slides.length})…`);
+    try {
+      const zip = new JSZip();
+      const folder = zip.folder(topic.slice(0, 40).replace(/\s+/g, '-') || 'carousel')!;
+      for (let i = 0; i < slides.length; i++) {
+        toast.loading(`Preparando ZIP (${i + 1}/${slides.length})…`, { id: toastId });
+        const handle = thumbRefs.current[i];
+        if (!handle) continue;
+        const blob = await new Promise<Blob | null>((res) => handle.toBlob(res));
+        if (blob) {
+          const name = `slide-${String(i + 1).padStart(2, '0')}.jpg`;
+          folder.file(name, blob);
+        }
+      }
+      toast.loading('Generando ZIP…', { id: toastId });
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = `${topic.slice(0, 40).replace(/\s+/g, '-') || 'carousel'}.zip`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+      toast.success(`ZIP con ${slides.length} diapositivas descargado`, { id: toastId });
+    } catch {
+      toast.error('Error al generar el ZIP', { id: toastId });
+    } finally {
+      setDownloading(false);
     }
-    setDownloading(false);
-    toast.success('Carrusel descargado');
   };
 
   const prev = () => setActiveIdx((i) => Math.max(0, i - 1));
@@ -657,7 +679,7 @@ export default function CarouselsPage() {
                 <Button size="sm" onClick={downloadAll} disabled={downloading}
                   className="bg-green-600 hover:bg-green-700 text-white gap-1.5 shrink-0">
                   {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                  Descargar todo
+                  {downloading ? 'Generando ZIP…' : 'Descargar ZIP'}
                 </Button>
               </div>
 
