@@ -1,11 +1,21 @@
 import { FFmpegOperation } from '@/types';
 
 export interface DirectEditOptions {
+  // Trim
+  trim?: boolean;
+  trimStart?: number; // seconds
+  trimEnd?: number;   // seconds
+  // Silence removal
   removeSilence?: boolean;
-  speed?: number | null;       // null = not selected
+  // Speed
+  speed?: number | null; // null = not selected; 1.0 = no change
+  // Vertical crop 9:16
   verticalCrop?: boolean;
+  // Subtitles
   subtitles?: boolean;
   subtitleStyle?: string;
+  // Audio extraction (exclusive — disables all video ops)
+  extractAudio?: boolean;
 }
 
 export interface TranscriptionSegmentMin {
@@ -16,13 +26,25 @@ export interface TranscriptionSegmentMin {
 
 /**
  * Build a sequential FFmpeg plan from selected options.
- * Operations are ordered for correctness: silence → speed → crop → subtitles.
- * Returns [] if nothing is selected.
+ * Correct execution order: trim → silence → speed → crop → subtitles
+ * Audio extract is exclusive and returns a single-step plan.
  */
 export function buildDirectPlan(
   options: DirectEditOptions,
   segments: TranscriptionSegmentMin[]
 ): FFmpegOperation[] {
+  // Audio extract is exclusive — nothing else
+  if (options.extractAudio) {
+    return [{
+      step: 1,
+      command_type: 'audio_extract',
+      parameters: { format: 'mp3' },
+      input_file: 'original',
+      output_file: 'final',
+      description: 'Extraer audio en formato MP3',
+    }];
+  }
+
   const ops: FFmpegOperation[] = [];
   let step = 1;
   let currentInput = 'original';
@@ -32,19 +54,21 @@ export function buildDirectPlan(
     parameters: Record<string, unknown>,
     description: string
   ) {
-    ops.push({
-      step,
-      command_type,
-      parameters,
-      input_file: currentInput,
-      output_file: `step_${step}`,
-      description,
-    });
+    ops.push({ step, command_type, parameters, input_file: currentInput, output_file: `step_${step}`, description });
     currentInput = `step_${step}`;
     step++;
   }
 
-  // 1. Remove silence — must come before speed/crop to work on original timing
+  // 1. Trim first — reduces the amount of data for subsequent steps
+  if (options.trim && options.trimEnd != null && options.trimEnd > (options.trimStart ?? 0)) {
+    pushOp(
+      'trim',
+      { start_time: options.trimStart ?? 0, end_time: options.trimEnd },
+      `Recortar de ${fmtTime(options.trimStart ?? 0)} a ${fmtTime(options.trimEnd)}`
+    );
+  }
+
+  // 2. Remove silence
   if (options.removeSilence && segments.length > 0) {
     pushOp(
       'silence_remove',
@@ -53,47 +77,40 @@ export function buildDirectPlan(
     );
   }
 
-  // 2. Speed change
+  // 3. Speed change
   if (options.speed && options.speed !== 1.0) {
-    pushOp(
-      'speed',
-      { speed_factor: options.speed },
-      `Cambiar velocidad a ${options.speed}x`
-    );
+    pushOp('speed', { speed_factor: options.speed }, `Velocidad ${options.speed}x`);
   }
 
-  // 3. Crop to 9:16 — before subtitles so they render on correct frame dimensions
+  // 4. Crop to 9:16 — before subtitles so text renders at correct dimensions
   if (options.verticalCrop) {
-    pushOp(
-      'crop',
-      { target_width: 9, target_height: 16 },
-      'Recortar a formato vertical 9:16 para redes sociales'
-    );
+    pushOp('crop', { target_width: 9, target_height: 16 }, 'Formato vertical 9:16');
   }
 
-  // 4. Subtitles last — burned onto the final dimensions
+  // 5. Subtitles last — burned onto final frame dimensions
   if (options.subtitles) {
-    pushOp(
-      'subtitle',
-      {}, // ass_path is injected at processing time
-      `Agregar subtítulos (estilo ${options.subtitleStyle ?? 'clasico'})`
-    );
+    pushOp('subtitle', {}, `Subtítulos (${options.subtitleStyle ?? 'clasico'})`);
   }
 
-  // The final operation must output 'final'
-  if (ops.length > 0) {
-    ops[ops.length - 1].output_file = 'final';
-  }
+  // Last op must output 'final'
+  if (ops.length > 0) ops[ops.length - 1].output_file = 'final';
 
   return ops;
 }
 
-/** Human-readable summary of the selected options */
+function fmtTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export function buildOperationLabel(options: DirectEditOptions): string {
+  if (options.extractAudio) return 'Extraer audio MP3';
   const parts: string[] = [];
+  if (options.trim) parts.push(`recorte ${fmtTime(options.trimStart ?? 0)}–${fmtTime(options.trimEnd ?? 0)}`);
   if (options.removeSilence) parts.push('sin silencios');
-  if (options.speed && options.speed !== 1.0) parts.push(`${options.speed}x velocidad`);
-  if (options.verticalCrop) parts.push('formato 9:16');
-  if (options.subtitles) parts.push(`subtítulos ${options.subtitleStyle ?? 'clásico'}`);
+  if (options.speed && options.speed !== 1.0) parts.push(`${options.speed}x`);
+  if (options.verticalCrop) parts.push('9:16');
+  if (options.subtitles) parts.push(`subtítulos (${options.subtitleStyle ?? 'clásico'})`);
   return parts.length > 0 ? `Exportar: ${parts.join(' + ')}` : 'Edición personalizada';
 }
