@@ -19,8 +19,8 @@ const FORMATS = [
 type FormatId = typeof FORMATS[number]['id'];
 
 const PROVIDERS = [
-  { id: 'gemini', label: 'Gemini Flash', sublabel: 'Google · Recomendado', color: 'sky' },
-  { id: 'dalle3', label: 'DALL-E 3',     sublabel: 'OpenAI',               color: 'violet' },
+  { id: 'dalle3',  label: 'DALL-E 3',     sublabel: 'OpenAI · Recomendado', color: 'sky' },
+  { id: 'dalle3hd', label: 'DALL-E 3 HD', sublabel: 'OpenAI · Alta calidad', color: 'violet' },
 ] as const;
 
 type ProviderId = typeof PROVIDERS[number]['id'];
@@ -30,7 +30,7 @@ export default function ImagesPage() {
   const [format, setFormat] = useState<FormatId>('square');
   const [count, setCount] = useState(4);
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
-  const [provider, setProvider] = useState<ProviderId>('gemini');
+  const [provider, setProvider] = useState<ProviderId>('dalle3');
   const [generating, setGenerating] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
@@ -85,7 +85,7 @@ export default function ImagesPage() {
   };
 
   const selectedFormat = FORMATS.find((f) => f.id === format)!;
-  const estimatedSeconds = provider === 'gemini' ? Math.ceil(count * 10) : Math.ceil(count * 12);
+  const estimatedSeconds = Math.ceil(count * 12);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
@@ -142,9 +142,9 @@ export default function ImagesPage() {
                     {p.label}
                   </p>
                   <p className="text-xs text-zinc-500 mt-0.5">{p.sublabel}</p>
-                  {p.id === 'gemini' && (
-                    <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 bg-sky-500/20 text-sky-400 rounded-md font-medium">
-                      Más rápido · Más formatos
+                  {p.id === 'dalle3hd' && (
+                    <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 bg-violet-500/20 text-violet-400 rounded-md font-medium">
+                      Mayor detalle y nitidez
                     </span>
                   )}
                 </button>
@@ -245,14 +245,6 @@ export default function ImagesPage() {
               </div>
             )}
 
-            {provider === 'gemini' && (
-              <div className="flex items-end">
-                <div className="w-full p-2.5 bg-sky-900/10 border border-sky-800/30 rounded-xl">
-                  <p className="text-xs text-sky-400 font-medium">Imagen 3 Pro</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">Alta fidelidad fotorrealista</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Estimate */}
