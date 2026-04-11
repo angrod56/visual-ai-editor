@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     max_tokens: 4000,
     messages: [{
       role: 'user',
-      content: `Eres un experto en marketing de contenidos y diseño editorial para redes sociales. Crea un carrusel profesional de alto engagement para ${platform}.
+      content: `Eres un director creativo senior especializado en contenido viral para redes sociales. Crea un carrusel narrativamente coherente para ${platform}.
 
 TEMA: "${topic}"
 NICHO: ${niche || 'no especificado'}
@@ -27,19 +27,27 @@ AUDIENCIA: ${audience || 'profesionales y emprendedores'}
 TONO: ${tone}
 TOTAL DE DIAPOSITIVAS: ${count}
 
-ESTRUCTURA OBLIGATORIA:
-- Diapositiva 1: tipo "cover" → portada impactante con título y subtítulo
-- Diapositivas 2 a ${count - 1}: tipo "content" → puntos clave numerados (01, 02, 03…)
-- Última diapositiva: tipo "cta" → llamada a la acción clara
+COHERENCIA NARRATIVA — REGLA MÁS IMPORTANTE:
+El carrusel debe leerse como una historia con inicio, desarrollo y cierre. Cada diapositiva es un capítulo que avanza la idea principal del título. Sigue este arco obligatorio:
+1. PORTADA: formula una promesa o pregunta que genera curiosidad sobre el tema
+2. CONTENIDO (slides 2 a ${count - 1}): cada punto es una respuesta, paso o argumento que cumple esa promesa. Los headlines deben poder leerse en secuencia y tener sentido juntos como una lista. Usa el mismo campo semántico, el mismo nivel de especificidad y el mismo sujeto implícito en todos.
+3. CTA: conecta directamente con la promesa de la portada — cierra el círculo.
+
+ESTRUCTURA:
+- Diapositiva 1: tipo "cover" → portada que lanza la promesa del carrusel
+- Diapositivas 2 a ${count - 1}: tipo "content" → puntos numerados (01, 02, 03…) que desarrollan el tema
+- Última diapositiva: tipo "cta" → cierre que conecta con la portada y activa acción
 
 REGLAS DE REDACCIÓN:
-- headline: máximo 7 palabras, directo, sin puntuación final
-- body: máximo 20 palabras, amplía el headline con un dato o beneficio concreto
-- emoji: 1 emoji relevante y visual (evita genéricos como 📌)
-- highlight: 1 o 2 palabras del headline para resaltar tipográficamente
-- number: "01", "02"... solo para slides de tipo "content"
+- headline: máximo 7 palabras, directo, sin puntuación final. Debe sonar como parte de la misma lista que los demás headlines de contenido.
+- body: máximo 20 palabras, amplía el headline con un ejemplo, dato o beneficio concreto relacionado con el TEMA principal
+- emoji: 1 emoji que refuerce visualmente el mensaje específico de esa slide (no emojis genéricos)
+- highlight: 1 o 2 palabras clave del headline que resuman su esencia
+- number: "01", "02"… solo para slides de tipo "content"
 
-${ctaText ? `CTA DE LA ÚLTIMA DIAPOSITIVA: El campo "body" de la última slide (tipo "cta") DEBE ser exactamente: "${ctaText}"` : ''}
+PRUEBA DE COHERENCIA: Antes de responder, verifica que los headlines de las slides de contenido puedan leerse como: "${topic}: [01], [02], [03]…" y tengan sentido.
+
+${ctaText ? `CTA OBLIGATORIO: El campo "body" de la última slide DEBE ser exactamente: "${ctaText}"` : ''}
 
 IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional.
 
