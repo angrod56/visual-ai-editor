@@ -178,12 +178,15 @@ async function executeSingleOperation(
       }
 
       case 'subtitle': {
-        const { srt_path } = op.parameters as { srt_path: string };
-        // Burn subtitles into video frames so they are visible in any player/browser.
-        // Escape path for FFmpeg filter string (backslashes and colons are special chars).
-        const escapedPath = safePath(srt_path).replace(/:/g, '\\:').replace(/'/g, "\\'");
+        // ass_path is set by the process route (preferred); fall back to srt_path
+        const { ass_path, srt_path } = op.parameters as { ass_path?: string; srt_path?: string };
+        const subtitleFile = ass_path ?? srt_path ?? '';
+        const escapedPath = safePath(subtitleFile).replace(/:/g, '\\:').replace(/'/g, "\\'");
+        const filter = ass_path
+          ? `ass='${escapedPath}'`
+          : `subtitles='${escapedPath}'`;
         cmd = cmd
-          .videoFilters(`subtitles='${escapedPath}'`)
+          .videoFilters(filter)
           .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
         break;
       }

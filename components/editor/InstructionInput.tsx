@@ -21,10 +21,11 @@ const SUGGESTION_CHIPS = [
 interface Props {
   projectId: string;
   projectReady: boolean;
+  subtitleStyle: string;
   onOperationStarted: (operationId: string) => void;
 }
 
-export function InstructionInput({ projectId, projectReady, onOperationStarted }: Props) {
+export function InstructionInput({ projectId, projectReady, subtitleStyle, onOperationStarted }: Props) {
   const [instruction, setInstruction] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -37,7 +38,7 @@ export function InstructionInput({ projectId, projectReady, onOperationStarted }
       const res = await fetch('/api/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: projectId, instruction }),
+        body: JSON.stringify({ project_id: projectId, instruction, subtitle_style: subtitleStyle }),
       });
 
       const data = await res.json();

@@ -8,6 +8,7 @@ import { VideoPlayer, VideoPlayerHandle } from '@/components/editor/VideoPlayer'
 import { InstructionInput } from '@/components/editor/InstructionInput';
 import { TranscriptionPanel } from '@/components/editor/TranscriptionPanel';
 import { OperationHistory } from '@/components/editor/OperationHistory';
+import { SubtitleStylePicker } from '@/components/editor/SubtitleStylePicker';
 import { ExportPanel } from '@/components/editor/ExportPanel';
 import { ProcessingStatus } from '@/components/editor/ProcessingStatus';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ export default function ProjectEditorPage() {
   const [activeOperationIds, setActiveOperationIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState(false);
+  const [subtitleStyle, setSubtitleStyle] = useState('clasico');
   const deletedOpIds = useRef<Set<string>>(new Set());
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,9 +221,14 @@ export default function ProjectEditorPage() {
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">Editar con IA</h3>
+              <SubtitleStylePicker
+                selected={subtitleStyle}
+                onChange={setSubtitleStyle}
+              />
               <InstructionInput
                 projectId={id}
                 projectReady={isReady}
+                subtitleStyle={subtitleStyle}
                 onOperationStarted={handleOperationStarted}
               />
             </div>

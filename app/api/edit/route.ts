@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const { project_id, instruction } = await request.json();
+  const { project_id, instruction, subtitle_style } = await request.json();
 
   if (!project_id || !instruction?.trim()) {
     return NextResponse.json(
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       instruction,
       ai_interpretation: {},
-      ffmpeg_commands: {},
+      ffmpeg_commands: subtitle_style ? { subtitle_style } : {},
       status: 'pending',
     })
     .select()

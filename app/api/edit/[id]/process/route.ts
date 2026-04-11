@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { interpretInstruction } from '@/lib/claude/video-orchestrator';
-import { executeEditPlan, generateSRTFile } from '@/lib/ffmpeg/executor';
+import { executeEditPlan } from '@/lib/ffmpeg/executor';
+import { generateASSFile } from '@/lib/ffmpeg/subtitle-styles';
+// subtitle-style-defs is imported transitively via subtitle-styles (server-only path)
 import { downloadToBuffer, uploadBuffer } from '@/lib/utils/storage';
 import { buildExportPath } from '@/lib/utils/video';
 import { VideoProject, Transcription } from '@/types';
@@ -99,14 +101,16 @@ export async function POST(
     await fs.writeFile(tmpInputPath, videoBuffer);
     await fs.mkdir(tmpOutputDir, { recursive: true });
 
-    // 4. Generate SRT if needed
+    // 4. Generate ASS subtitle file if needed (reads subtitle_style stored on the operation)
     const opsWithSubtitles = editPlan.ffmpeg_operations.filter(
       (op) => op.command_type === 'subtitle'
     );
     if (opsWithSubtitles.length > 0 && transcription.segments.length > 0) {
-      const srtPath = await generateSRTFile(transcription.segments, tmpOutputDir);
+      const storedStyle =
+        (operation.ffmpeg_commands as Record<string, unknown> | null)?.subtitle_style as string | undefined;
+      const assPath = await generateASSFile(transcription.segments, tmpOutputDir, storedStyle ?? 'clasico');
       opsWithSubtitles.forEach((op) => {
-        (op.parameters as Record<string, unknown>).srt_path = srtPath;
+        (op.parameters as Record<string, unknown>).ass_path = assPath;
       });
     }
 
