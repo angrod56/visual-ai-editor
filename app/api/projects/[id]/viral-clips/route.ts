@@ -6,7 +6,7 @@ import { VideoProject, Transcription } from '@/types';
 export const maxDuration = 60;
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: projectId } = await params;
@@ -14,6 +14,11 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+  const body = await request.json().catch(() => ({}));
+  const subtitles: boolean = body.subtitles ?? false;
+  const subtitleStyle: string = body.subtitleStyle ?? 'clasico';
+  const verticalCrop: boolean = body.verticalCrop ?? false;
 
   const { data: project } = await supabase
     .from('video_projects')
@@ -35,15 +40,12 @@ export async function POST(
   }
 
   const duration = typedProject.duration_seconds ?? 0;
-
-  // Ask Claude which segments are viral
   const clips = await findViralClips(transcription.segments, duration);
 
   if (clips.length === 0) {
     return NextResponse.json({ error: 'No se encontraron segmentos virales' }, { status: 422 });
   }
 
-  // Create one edit_operation per clip (direct trim mode)
   const operationIds: string[] = [];
 
   for (const clip of clips) {
@@ -51,9 +53,18 @@ export async function POST(
       trim: true,
       trimStart: clip.start,
       trimEnd: clip.end,
+      subtitles,
+      subtitleStyle,
+      verticalCrop,
     };
 
-    const instruction = clip.title;
+    // Build a human-readable label
+    const extras: string[] = [];
+    if (subtitles) extras.push(`subtítulos ${subtitleStyle}`);
+    if (verticalCrop) extras.push('9:16');
+    const instruction = extras.length > 0
+      ? `${clip.title} · ${extras.join(' + ')}`
+      : clip.title;
 
     const { data: op } = await supabase
       .from('edit_operations')
@@ -65,7 +76,7 @@ export async function POST(
         ffmpeg_commands: {
           mode: 'direct',
           direct_options: directOptions,
-          subtitle_style: 'clasico',
+          subtitle_style: subtitleStyle,
           viral_clip: {
             hook: clip.hook,
             viral_score: clip.viral_score,
@@ -79,7 +90,6 @@ export async function POST(
 
     if (op) {
       operationIds.push(op.id);
-      // Fire processing asynchronously
       fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/edit/${op.id}/process`, {
         method: 'POST',
         keepalive: true,

@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { TrendingUp, Loader2, CheckCircle2, ArrowRight, Type, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SUBTITLE_STYLES } from '@/lib/ffmpeg/subtitle-style-defs';
 
 type Stage = 'idle' | 'downloading' | 'transcribing' | 'analyzing' | 'done';
 
@@ -24,6 +25,9 @@ export function ViralClipsFromUrl() {
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [stage, setStage] = useState<Stage>('idle');
+  const [subtitles, setSubtitles] = useState(false);
+  const [subtitleStyle, setSubtitleStyle] = useState('clasico');
+  const [verticalCrop, setVerticalCrop] = useState(false);
 
   const isYouTube = /youtube\.com|youtu\.be/.test(url);
   const isBusy = stage !== 'idle' && stage !== 'done';
@@ -70,7 +74,11 @@ export function ViralClipsFromUrl() {
 
       // 4. Generate viral clips
       setStage('analyzing');
-      const clipsRes = await fetch(`/api/projects/${projectId}/viral-clips`, { method: 'POST' });
+      const clipsRes = await fetch(`/api/projects/${projectId}/viral-clips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subtitles, subtitleStyle, verticalCrop }),
+      });
       const clipsData = await clipsRes.json();
       if (!clipsRes.ok) {
         // Still redirect even if clips failed — user can generate manually in editor
@@ -132,6 +140,61 @@ export function ViralClipsFromUrl() {
             {stage === 'idle' ? 'Generar clips' : STAGES[stage].label || 'Generar clips'}
           </Button>
         </form>
+
+        {/* Export options */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSubtitles((v) => !v)}
+            disabled={isBusy}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
+              subtitles
+                ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
+                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+            )}
+          >
+            <Type className="w-3.5 h-3.5" />
+            Subtítulos
+          </button>
+          <button
+            type="button"
+            onClick={() => setVerticalCrop((v) => !v)}
+            disabled={isBusy}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
+              verticalCrop
+                ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
+                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+            )}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            Formato 9:16
+          </button>
+        </div>
+
+        {/* Subtitle style picker */}
+        {subtitles && !isBusy && (
+          <div className="flex flex-wrap gap-2 p-2.5 bg-slate-800/50 rounded-xl border border-slate-700/60">
+            <p className="w-full text-[10px] text-slate-500 uppercase tracking-wider">Estilo de subtítulos</p>
+            {SUBTITLE_STYLES.map((style) => (
+              <button
+                key={style.id}
+                type="button"
+                onClick={() => setSubtitleStyle(style.id)}
+                className={cn(
+                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[56px]',
+                  subtitleStyle === style.id
+                    ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
+                    : `${style.preview.bg} ${style.preview.border} hover:border-slate-500`
+                )}
+              >
+                <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
+                <span className="text-[10px] text-slate-400">{style.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Progress stages */}
         {stage !== 'idle' && (
