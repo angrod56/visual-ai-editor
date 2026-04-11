@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { interpretInstruction } from '@/lib/claude/video-orchestrator';
 import { executeEditPlan } from '@/lib/ffmpeg/executor';
-import { generateASSFile } from '@/lib/ffmpeg/subtitle-styles';
 import { buildDirectPlan, DirectEditOptions } from '@/lib/ffmpeg/plan-builder';
 import { downloadToBuffer, uploadBuffer } from '@/lib/utils/storage';
 import { buildExportPath } from '@/lib/utils/video';
@@ -90,12 +89,12 @@ export async function POST(
         transcription.segments
       );
 
-      // Inject ASS path for subtitle operations
+      // Inject segments into subtitle operations (uses drawtext, no libass needed)
       const subOps = ffmpegOperations.filter((op) => op.command_type === 'subtitle');
       if (subOps.length > 0 && transcription.segments.length > 0) {
-        const assPath = await generateASSFile(transcription.segments, tmpOutputDir, subtitleStyle);
         subOps.forEach((op) => {
-          (op.parameters as Record<string, unknown>).ass_path = assPath;
+          (op.parameters as Record<string, unknown>).segments = transcription.segments;
+          (op.parameters as Record<string, unknown>).style = subtitleStyle;
         });
       }
 
@@ -131,13 +130,13 @@ export async function POST(
       estimatedDuration = editPlan.estimated_output.duration_seconds ?? null;
       aiInterpretation = editPlan as unknown as Record<string, unknown>;
 
-      // Inject ASS path for subtitle operations
+      // Inject segments into subtitle operations (uses drawtext, no libass needed)
       const subOps = ffmpegOperations.filter((op) => op.command_type === 'subtitle');
       if (subOps.length > 0 && transcription.segments.length > 0) {
         const claudeStyle = storedCommands.subtitle_style as string ?? 'clasico';
-        const assPath = await generateASSFile(transcription.segments, tmpOutputDir, claudeStyle);
         subOps.forEach((op) => {
-          (op.parameters as Record<string, unknown>).ass_path = assPath;
+          (op.parameters as Record<string, unknown>).segments = transcription.segments;
+          (op.parameters as Record<string, unknown>).style = claudeStyle;
         });
       }
     }

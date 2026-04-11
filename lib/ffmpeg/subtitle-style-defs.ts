@@ -13,6 +13,18 @@ export interface SubtitleStyle {
   outline: number;
   shadow: number;
   alignment: number; // 2=bottom-center, 8=top-center
+  // drawtext parameters (used by executor — no libass required)
+  dt: {
+    fontsize: number;
+    fontcolor: string;
+    borderw: number;
+    bordercolor: string;
+    shadowx: number;
+    shadowy: number;
+    shadowcolor: string;
+    box: number;       // 1=enabled, 0=disabled
+    boxcolor: string;
+  };
   preview: {
     bg: string;
     text: string;
@@ -35,6 +47,7 @@ export const SUBTITLE_STYLES: SubtitleStyle[] = [
     outline: 2,
     shadow: 1,
     alignment: 2,
+    dt: { fontsize: 52, fontcolor: 'white', borderw: 3, bordercolor: 'black', shadowx: 2, shadowy: 2, shadowcolor: 'black@0.6', box: 0, boxcolor: 'black@0.0' },
     preview: { bg: 'bg-slate-900', text: 'Aa', textColor: 'text-white font-bold', border: 'border-slate-600' },
   },
   {
@@ -50,6 +63,7 @@ export const SUBTITLE_STYLES: SubtitleStyle[] = [
     outline: 3,
     shadow: 0,
     alignment: 2,
+    dt: { fontsize: 68, fontcolor: 'yellow', borderw: 4, bordercolor: 'black', shadowx: 0, shadowy: 0, shadowcolor: 'black@0.0', box: 0, boxcolor: 'black@0.0' },
     preview: { bg: 'bg-black', text: 'Aa', textColor: 'text-yellow-300 font-black', border: 'border-yellow-700' },
   },
   {
@@ -65,6 +79,7 @@ export const SUBTITLE_STYLES: SubtitleStyle[] = [
     outline: 1,
     shadow: 2,
     alignment: 2,
+    dt: { fontsize: 40, fontcolor: 'white@0.9', borderw: 1, bordercolor: 'black@0.5', shadowx: 2, shadowy: 2, shadowcolor: 'black@0.4', box: 0, boxcolor: 'black@0.0' },
     preview: { bg: 'bg-slate-800', text: 'Aa', textColor: 'text-slate-200 italic', border: 'border-slate-600' },
   },
   {
@@ -80,6 +95,7 @@ export const SUBTITLE_STYLES: SubtitleStyle[] = [
     outline: 1,
     shadow: 3,
     alignment: 2,
+    dt: { fontsize: 46, fontcolor: 'white', borderw: 2, bordercolor: 'black@0.3', shadowx: 3, shadowy: 3, shadowcolor: 'black@0.5', box: 1, boxcolor: 'black@0.35' },
     preview: { bg: 'bg-slate-900', text: 'Aa', textColor: 'text-white italic font-serif', border: 'border-purple-700' },
   },
   {
@@ -95,6 +111,7 @@ export const SUBTITLE_STYLES: SubtitleStyle[] = [
     outline: 2,
     shadow: 0,
     alignment: 2,
+    dt: { fontsize: 56, fontcolor: 'cyan', borderw: 3, bordercolor: 'magenta@0.8', shadowx: 0, shadowy: 0, shadowcolor: 'black@0.0', box: 0, boxcolor: 'black@0.0' },
     preview: { bg: 'bg-black', text: 'Aa', textColor: 'text-cyan-400 font-bold', border: 'border-cyan-700' },
   },
 ];

@@ -1,7 +1,8 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { FFmpegOperation } from '@/types';
-import { secondsToSrtTimestamp, safePath } from './utils';
+import { secondsToSrtTimestamp } from './utils';
+import { getSubtitleStyle } from './subtitle-style-defs';
 
 // Lazy init — must not run at module load time (breaks Next.js build on Vercel)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,16 +179,21 @@ async function executeSingleOperation(
       }
 
       case 'subtitle': {
-        // ass_path is set by the process route (preferred); fall back to srt_path
-        const { ass_path, srt_path } = op.parameters as { ass_path?: string; srt_path?: string };
-        const subtitleFile = ass_path ?? srt_path ?? '';
-        const escapedPath = safePath(subtitleFile).replace(/:/g, '\\:').replace(/'/g, "\\'");
-        const filter = ass_path
-          ? `ass='${escapedPath}'`
-          : `subtitles='${escapedPath}'`;
-        cmd = cmd
-          .videoFilters(filter)
-          .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+        // Use drawtext filter — works without libass/fontconfig on any FFmpeg build
+        const { segments = [], style = 'clasico' } = op.parameters as {
+          segments?: Array<{ start: number; end: number; text: string }>;
+          style?: string;
+        };
+
+        if (segments.length === 0) {
+          // No transcription — just copy
+          cmd = cmd.outputOptions(['-c copy']);
+        } else {
+          const dtFilters = buildDrawtextFilters(segments, style);
+          cmd = cmd
+            .videoFilters(dtFilters)
+            .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+        }
         break;
       }
 
@@ -249,6 +255,49 @@ function buildAtempoFilters(speed: number): string {
   }
   filters.push(`atempo=${remaining.toFixed(4)}`);
   return filters.join(',');
+}
+
+/**
+ * Build an array of drawtext filters for burning subtitles into video.
+ * Uses drawtext instead of ass/subtitles to avoid libass/fontconfig dependency.
+ */
+function buildDrawtextFilters(
+  segments: Array<{ start: number; end: number; text: string }>,
+  styleId: string
+): string[] {
+  const s = getSubtitleStyle(styleId);
+  const dt = s.dt;
+
+  return segments.map((seg) => {
+    // Escape special drawtext characters: \, ', :, [, ], ,, ;, =, newlines
+    const text = seg.text.trim()
+      .replace(/\\/g, '\\\\\\\\')
+      .replace(/'/g, "\u2019")   // replace apostrophe with right single quote (avoids escaping hell)
+      .replace(/:/g, '\\:')
+      .replace(/\[/g, '\\[')
+      .replace(/\]/g, '\\]')
+      .replace(/,/g, '\\,')
+      .replace(/\n/g, ' ');
+
+    const enable = `between(t\\,${seg.start.toFixed(3)}\\,${seg.end.toFixed(3)})`;
+
+    const parts = [
+      `text='${text}'`,
+      `fontsize=${dt.fontsize}`,
+      `fontcolor=${dt.fontcolor}`,
+      `borderw=${dt.borderw}`,
+      `bordercolor=${dt.bordercolor}`,
+      ...(dt.shadowx !== 0 || dt.shadowy !== 0
+        ? [`shadowx=${dt.shadowx}`, `shadowy=${dt.shadowy}`, `shadowcolor=${dt.shadowcolor}`]
+        : []),
+      ...(dt.box ? [`box=1`, `boxcolor=${dt.boxcolor}`, `boxborderw=8`] : []),
+      `x=(w-text_w)/2`,
+      `y=h-text_h-60`,
+      `enable='${enable}'`,
+    ];
+
+    return `drawtext=${parts.join(':')}`;
+  });
 }
 
 /**
