@@ -9,21 +9,34 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const { topic, audience, platform, tone, count = 4 } = await request.json();
+  const { topic, niche, audience, pains = [], dreams = [], platform, tone, count = 4 } = await request.json();
   if (!topic) return NextResponse.json({ error: 'topic es requerido' }, { status: 400 });
+
+  const painsBlock = pains.length > 0
+    ? `DOLORES DETECTADOS:\n${pains.map((p: string) => `  - ${p}`).join('\n')}`
+    : '';
+  const dreamsBlock = dreams.length > 0
+    ? `SUEÑOS Y DESEOS:\n${dreams.map((d: string) => `  - ${d}`).join('\n')}`
+    : '';
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 3000,
     messages: [{
       role: 'user',
-      content: `Eres un director creativo senior especializado en Meta Ads de alta conversión (Facebook/Instagram). Tu trabajo es crear scripts de anuncios que detengan el scroll y generen ventas reales.
+      content: `Eres un director creativo senior especializado en Meta Ads de alta conversión (Facebook/Instagram). Tu trabajo es crear scripts de anuncios que detengan el scroll, toquen los dolores reales del cliente y conecten con sus sueños más profundos.
 
-Genera ${count} scripts DIFERENTES entre sí para:
+Genera ${count} scripts DIFERENTES entre sí. Cada uno debe atacar un dolor o sueño distinto para probar qué ángulo convierte mejor.
+
 PRODUCTO/SERVICIO: "${topic}"
-AUDIENCIA: ${audience || 'adultos en general interesados en el tema'}
+NICHO DE MERCADO: ${niche || 'no especificado'}
+PERFIL DEL CLIENTE IDEAL: ${audience || 'adultos interesados en el tema'}
 PLATAFORMA: ${platform || 'Instagram y Facebook'}
-TONO: ${tone || 'profesional, persuasivo y cercano'}
+TONO: ${tone || 'emocional y persuasivo'}
+${painsBlock}
+${dreamsBlock}
+
+INSTRUCCIÓN CLAVE: Usa los dolores para crear ganchos que generen identificación inmediata ("¿Te pasa que...?", "Cansada de..."). Usa los sueños para pintar la transformación en el cuerpo del mensaje y reforzar el CTA. Si no hay dolores/sueños definidos, infíerelos del nicho.
 
 Cada script debe incluir:
 - hook: frase de impacto que detiene el scroll en menos de 2 segundos (máx 10 palabras, en español, sin signos de interrogación genéricos)
