@@ -73,7 +73,10 @@ export default function ImagesPage() {
         toast.success(`${generated} imagen${generated !== 1 ? 'es' : ''} generada${generated !== 1 ? 's' : ''}`);
         await fetchImages();
       }
-      if (failed > 0) toast.warning(`${failed} imagen${failed !== 1 ? 'es' : ''} fallaron`);
+      if (failed > 0) {
+        const reason = data.errors?.[0] ?? 'Error desconocido';
+        toast.warning(`${failed} imagen${failed !== 1 ? 'es' : ''} falló: ${reason.slice(0, 120)}`);
+      };
     } catch {
       toast.error('Error de conexión');
     } finally {

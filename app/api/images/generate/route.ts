@@ -59,29 +59,35 @@ async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function generateWithRetry(prompt: string, attempt = 0): Promise<Buffer | null> {
+async function generateWithRetry(prompt: string, attempt = 0): Promise<Buffer> {
   try {
     const result = await generateOneWithGemini(prompt);
+    if (!result) throw new Error('No image data returned');
     return result;
   } catch (err) {
     if (attempt < 2) {
-      await sleep(1500 * (attempt + 1)); // 1.5s, 3s
+      await sleep(1500 * (attempt + 1));
       return generateWithRetry(prompt, attempt + 1);
     }
-    console.error('Gemini image generation failed after retries:', err);
-    return null;
+    throw err;
   }
 }
 
-async function generateWithGemini(prompt: string, count: number): Promise<Buffer[]> {
-  // Stagger requests to avoid rate limits (600ms apart)
+async function generateWithGemini(prompt: string, count: number): Promise<{ buffers: Buffer[]; errors: string[] }> {
   const buffers: Buffer[] = [];
+  const errors: string[] = [];
   for (let i = 0; i < count; i++) {
     if (i > 0) await sleep(600);
-    const buf = await generateWithRetry(prompt);
-    if (buf) buffers.push(buf);
+    try {
+      const buf = await generateWithRetry(prompt);
+      buffers.push(buf);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Gemini] Image ${i + 1}/${count} failed:`, msg);
+      errors.push(msg);
+    }
   }
-  return buffers;
+  return { buffers, errors };
 }
 
 async function generateWithDalle3(prompt: string, format: string, quality: string): Promise<Buffer> {
@@ -131,10 +137,13 @@ export async function POST(request: NextRequest) {
     : { width: DALLE_FORMATS[format]?.width ?? 1024, height: DALLE_FORMATS[format]?.height ?? 1024 };
 
   let buffers: Buffer[] = [];
+  let genErrors: string[] = [];
 
   try {
     if (useGemini) {
-      buffers = await generateWithGemini(prompt, batchSize);
+      const result = await generateWithGemini(prompt, batchSize);
+      buffers = result.buffers;
+      genErrors = result.errors;
     } else {
       const results = await Promise.allSettled(
         Array.from({ length: batchSize }, () => generateWithDalle3(prompt, format, quality))
@@ -142,9 +151,16 @@ export async function POST(request: NextRequest) {
       buffers = results
         .filter((r): r is PromiseFulfilledResult<Buffer> => r.status === 'fulfilled')
         .map((r) => r.value);
+      genErrors = results
+        .filter((r) => r.status === 'rejected')
+        .map((r) => (r as PromiseRejectedResult).reason?.message ?? 'Error desconocido');
     }
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+
+  if (buffers.length === 0) {
+    return NextResponse.json({ error: `No se pudo generar ninguna imagen. Error: ${genErrors[0] ?? 'desconocido'}` }, { status: 500 });
   }
 
   const insertions = buffers.map(async (buffer) => {
@@ -178,5 +194,5 @@ export async function POST(request: NextRequest) {
     .filter((r): r is PromiseFulfilledResult<NonNullable<typeof results[0] extends PromiseFulfilledResult<infer T> ? T : never>> => r.status === 'fulfilled' && r.value !== null)
     .map((r) => r.value);
 
-  return NextResponse.json({ images, failed: batchSize - images.length });
+  return NextResponse.json({ images, failed: genErrors.length, errors: genErrors });
 }
