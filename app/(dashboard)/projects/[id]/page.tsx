@@ -194,7 +194,7 @@ export default function ProjectEditorPage() {
 
       {/* Main editor grid */}
       <div className="flex-1 overflow-auto p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
           {/* Left column: Player + Transcription */}
           <div className="lg:col-span-4 space-y-4">
@@ -255,8 +255,8 @@ export default function ProjectEditorPage() {
             </div>
           </div>
 
-          {/* Right column: Exports */}
-          <div className="lg:col-span-3">
+          {/* Right column: Exports — sticky so it stays in view while scrolling */}
+          <div className="lg:col-span-3 lg:sticky lg:top-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">
                 Exportaciones ({exports.length})

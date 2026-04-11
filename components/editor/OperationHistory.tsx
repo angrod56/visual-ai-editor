@@ -88,7 +88,7 @@ export function OperationHistory({ operations, onDeleted }: Props) {
   }
 
   return (
-    <ScrollArea className="max-h-72">
+    <ScrollArea className="max-h-96">
       <div className="space-y-2 pr-2">
         {[...operations].reverse().map((op) => {
           const Icon = STATUS_ICONS[op.status] ?? Clock;

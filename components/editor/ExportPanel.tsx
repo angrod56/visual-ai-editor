@@ -65,7 +65,7 @@ export function ExportPanel({ exports }: Props) {
   }
 
   return (
-    <ScrollArea className="max-h-72">
+    <ScrollArea className="max-h-[calc(100vh-220px)]">
       <div className="space-y-2 pr-2">
         {[...exports].reverse().map((exp) => {
           const Icon = TYPE_ICONS[exp.export_type] ?? FileVideo;
