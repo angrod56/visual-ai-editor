@@ -128,7 +128,7 @@ export default function CarouselsPage() {
       setCarouselTitle(data.title ?? topic);
       setActiveIdx(0);
       setBgSlides(new Set());
-      setOpenSlides(new Set([0])); // first slide open by default
+      setOpenSlides(new Set([0, generated.length - 1])); // portada + CTA open by default
       setMode('editor');
       toast.success(`${generated.length} diapositivas generadas`);
     } catch {
@@ -285,6 +285,46 @@ export default function CarouselsPage() {
           /* ── Slide editor ── */
           <div className="space-y-4">
 
+            {/* ── CTA quick-edit (always visible) ── */}
+            {slides.length > 0 && (() => {
+              const ctaSlide = slides[slides.length - 1];
+              const ctaIdx   = slides.length - 1;
+              return (
+                <div className="rounded-xl border border-green-500/40 bg-green-950/40 p-3 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-green-300 flex items-center gap-1.5">
+                      <span className="w-4 h-4 rounded-full bg-green-500/30 flex items-center justify-center text-[10px]">✦</span>
+                      CTA — Última diapositiva
+                    </p>
+                    <button onClick={() => { setActiveIdx(ctaIdx); toggleOpen(ctaIdx); }}
+                      className="text-[10px] text-green-600 hover:text-green-400 transition-colors">
+                      ver en preview →
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="shrink-0">
+                      <label className="text-[10px] text-zinc-500 mb-1 block">Emoji</label>
+                      <input value={ctaSlide.emoji ?? ''} onChange={(e) => updateSlide(ctaIdx, { emoji: e.target.value })}
+                        placeholder="🚀"
+                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:border-green-500 transition-colors" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-zinc-500 mb-1 block">Titular del CTA</label>
+                      <input value={ctaSlide.headline} onChange={(e) => updateSlide(ctaIdx, { headline: e.target.value })}
+                        placeholder="ej: ¿Listo para empezar?"
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-green-500 transition-colors" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 mb-1 block">Texto del botón de acción</label>
+                    <input value={ctaSlide.body ?? ''} onChange={(e) => updateSlide(ctaIdx, { body: e.target.value })}
+                      placeholder="ej: Escríbeme al DM · Visita el link en bio · Compra ahora"
+                      className="w-full bg-zinc-900 border border-green-700/40 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-green-500 transition-colors font-medium" />
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Bg photo (accessible in editor too) */}
             <BgUpload bgPreview={bgPreview} dragging={dragging} bgInputRef={bgInputRef}
               onClear={clearBg} onDragging={setDragging} onFile={handleBgFile} compact />
@@ -300,15 +340,20 @@ export default function CarouselsPage() {
                   const isOpen   = openSlides.has(i);
                   const hasBg    = bgSlides.has(i);
                   const isActive = activeIdx === i;
+                  const isCTA = slide.type === 'cta';
                   return (
                     <div key={slide.id}
                       className={cn(
                         'rounded-xl border overflow-hidden transition-colors',
-                        isActive ? 'border-amber-500/40' : 'border-zinc-800'
+                        isCTA ? 'border-green-500/40 ring-1 ring-green-500/10'
+                          : isActive ? 'border-amber-500/40' : 'border-zinc-800'
                       )}>
 
                       {/* Row header */}
-                      <div className="flex items-center gap-2 px-3 py-2.5 bg-zinc-900">
+                      <div className={cn(
+                        'flex items-center gap-2 px-3 py-2.5',
+                        isCTA ? 'bg-green-950/60' : 'bg-zinc-900'
+                      )}>
                         {/* Preview selector */}
                         <button onClick={() => setActiveIdx(i)}
                           className={cn(
