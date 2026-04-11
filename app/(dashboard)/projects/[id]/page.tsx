@@ -296,6 +296,7 @@ export default function ProjectEditorPage() {
                 <OperationHistory
                   operations={operations}
                   onDeleted={handleOperationDeleted}
+                  onOperationStarted={handleOperationStarted}
                 />
               </div>
             </div>

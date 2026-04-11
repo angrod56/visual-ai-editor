@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { EditOperation, EditPlan } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -34,12 +34,15 @@ const STATUS_LABELS: Record<string, string> = {
 interface Props {
   operations: EditOperation[];
   onDeleted?: (id: string) => void;
+  onOperationStarted?: (id: string) => void;
 }
 
-export function OperationHistory({ operations, onDeleted }: Props) {
+export function OperationHistory({ operations, onDeleted, onOperationStarted }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [clarifications, setClarifications] = useState<Record<string, string>>({});
+  const [replying, setReplying] = useState<string | null>(null);
 
   const handleDelete = async (e: React.MouseEvent, opId: string) => {
     e.stopPropagation();
@@ -77,6 +80,32 @@ export function OperationHistory({ operations, onDeleted }: Props) {
     }
   };
 
+  const handleReply = async (op: EditOperation) => {
+    const answer = clarifications[op.id]?.trim();
+    if (!answer) return;
+    setReplying(op.id);
+    try {
+      const combinedInstruction = `${op.instruction}. Aclaración: ${answer}`;
+      const res = await fetch('/api/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: op.project_id, instruction: combinedInstruction }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al enviar respuesta'); return; }
+      // Remove old clarification op and start new one
+      onDeleted?.(op.id);
+      onOperationStarted?.(data.operation_id);
+      setClarifications((p) => { const n = { ...p }; delete n[op.id]; return n; });
+      fetch(`/api/edit/${data.operation_id}/process`, { method: 'POST', keepalive: true }).catch(() => {});
+      toast.success('Procesando con tu aclaración...');
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setReplying(null);
+    }
+  };
+
   if (operations.length === 0) {
     return (
       <div className="text-center py-8 text-slate-500 text-sm">
@@ -91,7 +120,7 @@ export function OperationHistory({ operations, onDeleted }: Props) {
       {[...operations].reverse().map((op) => {
           const Icon = STATUS_ICONS[op.status] ?? Clock;
           const plan = op.ai_interpretation as EditPlan;
-          const isExpanded = expanded === op.id;
+          const isExpanded = expanded === op.id || op.status === 'needs_clarification';
           const canDelete = op.status === 'failed' || op.status === 'needs_clarification';
           const canCancel = op.status === 'pending' || op.status === 'processing';
 
@@ -156,6 +185,37 @@ export function OperationHistory({ operations, onDeleted }: Props) {
 
               {isExpanded && (
                 <div className="px-3 pb-3 space-y-2 border-t border-slate-700 pt-2">
+                  {/* Clarification reply UI */}
+                  {op.status === 'needs_clarification' && (
+                    <div className="space-y-2 p-2.5 bg-orange-900/10 border border-orange-800/40 rounded-lg">
+                      {plan?.clarification_question && (
+                        <p className="text-xs text-orange-300 font-medium">
+                          {plan.clarification_question as string}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={clarifications[op.id] ?? ''}
+                          onChange={(e) => setClarifications((p) => ({ ...p, [op.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleReply(op); }}
+                          placeholder="Tu respuesta..."
+                          className="flex-1 text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500"
+                        />
+                        <button
+                          onClick={() => handleReply(op)}
+                          disabled={!clarifications[op.id]?.trim() || replying === op.id}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white text-xs rounded-lg transition-colors"
+                        >
+                          {replying === op.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Send className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {plan?.description && (
                     <p className="text-xs text-slate-400">
                       <span className="text-slate-500">Plan:</span> {plan.description}
