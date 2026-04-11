@@ -5,11 +5,12 @@ import {
   CarouselSlide, CarouselTheme, CAROUSEL_THEMES,
   SlideCanvas, SlideCanvasHandle,
 } from '@/components/carousels/SlideCanvas';
+import { ContentStrategy, StrategyItem } from '@/components/carousels/ContentStrategy';
 import {
   Layout, Loader2, Sparkles, Download,
   ChevronLeft, ChevronRight, ArrowLeft,
   ImagePlus, X, ChevronDown, Image as ImageIcon,
-  Save, FolderOpen, Trash2, Clock,
+  Save, Trash2, Map, FolderOpen, Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -22,12 +23,15 @@ const SLIDE_COUNTS = [5, 7, 9, 10];
 const FIELD = 'w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors';
 
 export default function CarouselsPage() {
+  // — page tabs
+  const [pageMode, setPageMode] = useState<'carousel' | 'strategy'>('carousel');
+
   // — form
   const [topic, setTopic]         = useState('');
   const [niche, setNiche]         = useState('');
   const [audience, setAudience]   = useState('');
   const [platform, setPlatform]   = useState('Instagram');
-  const [tone, setTone]           = useState('Educativo');
+  const [tone, setTone]           = useState('Ventas');
   const [slideCount, setSlideCount] = useState(7);
   const [ctaText, setCtaText]     = useState('');
 
@@ -213,6 +217,50 @@ export default function CarouselsPage() {
     }
   };
 
+  // ── From strategy → pre-fill form and generate ─────────────────────
+  const handleStrategySelect = async (item: StrategyItem) => {
+    setPageMode('carousel');
+    setMode('form');
+    setTopic(item.topic);
+    setTone('Ventas');
+    setCtaText(item.cta_idea);
+    // Small delay so state updates render before auto-generating
+    await new Promise((r) => setTimeout(r, 80));
+    setGenerating(true);
+    setSlides([]);
+    try {
+      const res = await fetch('/api/carousels/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: item.topic,
+          niche,
+          audience,
+          platform,
+          slideCount,
+          tone: 'Ventas',
+          ctaText: item.cta_idea,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al generar'); return; }
+      const generated: CarouselSlide[] = data.slides ?? [];
+      thumbRefs.current = new Array(generated.length).fill(null);
+      setSlides(generated);
+      setCarouselTitle(data.title ?? item.topic);
+      setActiveIdx(0);
+      setBgSlides(new Set());
+      setOpenSlides(new Set([0, generated.length - 1]));
+      setSavedId(null);
+      setMode('editor');
+      toast.success(`Carrusel "${item.stage}" generado`);
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // ── Edit ──────────────────────────────────────────────────────────────
   const updateSlide = (idx: number, patch: Partial<CarouselSlide>) =>
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
@@ -243,7 +291,7 @@ export default function CarouselsPage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -255,7 +303,7 @@ export default function CarouselsPage() {
             Genera carruseles profesionales con IA listos para publicar en redes sociales
           </p>
         </div>
-        {mode === 'editor' && (
+        {pageMode === 'carousel' && mode === 'editor' && (
           <div className="flex items-center gap-2 shrink-0 mt-1">
             <Button size="sm" onClick={saveCarousel} disabled={saving || !slides.length}
               className={cn(
@@ -274,6 +322,55 @@ export default function CarouselsPage() {
         )}
       </div>
 
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl w-fit">
+        <button
+          onClick={() => setPageMode('carousel')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+            pageMode === 'carousel'
+              ? 'bg-amber-500 text-black'
+              : 'text-zinc-400 hover:text-white'
+          )}
+        >
+          <Layout className="w-4 h-4" />
+          Carrusel
+        </button>
+        <button
+          onClick={() => setPageMode('strategy')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
+            pageMode === 'strategy'
+              ? 'bg-amber-500 text-black'
+              : 'text-zinc-400 hover:text-white'
+          )}
+        >
+          <Map className="w-4 h-4" />
+          Estrategia (10 carruseles)
+        </button>
+      </div>
+
+      {/* ── Strategy tab ── */}
+      {pageMode === 'strategy' && (
+        <div className="max-w-3xl">
+          <ContentStrategy
+            defaultNiche={niche}
+            defaultAudience={audience}
+            defaultCta={ctaText}
+            onSelectTopic={handleStrategySelect}
+          />
+        </div>
+      )}
+
+      {/* ── Carousel tab ── */}
+      {pageMode === 'carousel' && (
+      <div className="space-y-8">
+      {generating && mode === 'form' && (
+        <div className="flex items-center gap-3 text-zinc-400 py-4">
+          <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+          <span className="text-sm">Generando carrusel desde estrategia...</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
 
         {/* ══════════ LEFT ══════════ */}
@@ -685,6 +782,8 @@ export default function CarouselsPage() {
           </div>
         )}
       </div>
+      </div>
+      )}
     </div>
   );
 }
