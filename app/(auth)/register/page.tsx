@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,6 +39,7 @@ export default function RegisterPage() {
       password,
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/projects`,
+        data: { full_name: name.trim() },
       },
     });
 
@@ -80,6 +82,20 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-300" htmlFor="name">
+                Nombre completo
+              </label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Juan García"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-500 focus:border-amber-500"
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-300" htmlFor="email">
                 Correo electrónico
