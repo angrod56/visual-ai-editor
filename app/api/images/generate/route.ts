@@ -35,7 +35,7 @@ async function generateWithImagen3(
   const aspectRatio = IMAGEN_ASPECT_RATIOS[format] ?? '1:1';
 
   const response = await ai.models.generateImages({
-    model: 'imagen-3.0-generate-002',
+    model: 'imagen-3.0-generate-001',
     prompt: `${prompt}. Professional advertising photo, high quality, suitable for Meta ads, commercial photography style.`,
     config: {
       numberOfImages: count,
