@@ -142,9 +142,9 @@ export default function ProjectEditorPage() {
   const isReady = project.status === 'ready';
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col min-h-full">
       {/* Top bar */}
-      <div className="border-b border-slate-800 bg-slate-900/50 px-6 py-3 flex items-center gap-4">
+      <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm px-6 py-3 flex items-center gap-4">
         <Link
           href="/projects"
           className="text-slate-400 hover:text-white transition-colors"
@@ -193,7 +193,7 @@ export default function ProjectEditorPage() {
       </div>
 
       {/* Main editor grid */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 p-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
           {/* Left column: Player + Transcription */}
@@ -256,7 +256,7 @@ export default function ProjectEditorPage() {
           </div>
 
           {/* Right column: Exports — sticky so it stays in view while scrolling */}
-          <div className="lg:col-span-3 lg:sticky lg:top-4">
+          <div className="lg:col-span-3 lg:sticky lg:top-[73px]">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">
                 Exportaciones ({exports.length})
