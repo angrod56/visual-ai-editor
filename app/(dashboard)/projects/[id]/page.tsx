@@ -95,6 +95,10 @@ export default function ProjectEditorPage() {
     setActiveOperationIds((prev) => prev.filter((id) => id !== opId));
   }, []);
 
+  const handleExportDeleted = useCallback((exportId: string) => {
+    setExports((prev) => prev.filter((e) => e.id !== exportId));
+  }, []);
+
   // Realtime subscription: reflect INSERT/UPDATE on edit_operations instantly
   useEffect(() => {
     if (!id) return;
@@ -294,7 +298,7 @@ export default function ProjectEditorPage() {
               <h3 className="text-sm font-semibold text-white mb-3">
                 Exportaciones ({exports.length})
               </h3>
-              <ExportPanel exports={exports} />
+              <ExportPanel exports={exports} onDeleted={handleExportDeleted} />
             </div>
           </div>
 

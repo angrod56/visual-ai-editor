@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { VideoExport } from '@/types';
 import { formatFileSize, formatDuration } from '@/lib/utils/video';
-import { Download, FileVideo, Film, Headphones, Zap, Play, X, Loader2 } from 'lucide-react';
+import { Download, FileVideo, Film, Headphones, Zap, Play, X, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 interface Props {
   exports: VideoExport[];
+  onDeleted?: (id: string) => void;
 }
 
 interface PreviewState {
@@ -41,9 +42,10 @@ interface PreviewState {
   duration?: number | null;
 }
 
-export function ExportPanel({ exports }: Props) {
+export function ExportPanel({ exports, onDeleted }: Props) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
 
   const fetchSignedUrl = async (exportId: string) => {
@@ -68,6 +70,23 @@ export function ExportPanel({ exports }: Props) {
       toast.error('Error al cargar la preview');
     } finally {
       setLoadingPreview(null);
+    }
+  };
+
+  const handleDelete = async (exp: VideoExport) => {
+    setDeleting(exp.id);
+    try {
+      const res = await fetch(`/api/exports/${exp.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted?.(exp.id);
+        toast.success('Exportación eliminada');
+      } else {
+        toast.error('Error al eliminar');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -96,7 +115,7 @@ export function ExportPanel({ exports }: Props) {
 
   return (
     <>
-      <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+      <div className="space-y-2 overflow-y-auto max-h-[420px] pr-1">
         {[...exports].reverse().map((exp) => {
           const Icon = TYPE_ICONS[exp.export_type] ?? FileVideo;
           const isAudio = exp.export_type === 'audio';
@@ -156,6 +175,19 @@ export function ExportPanel({ exports }: Props) {
                     {downloading === exp.id
                       ? <Loader2 className="w-4 h-4 animate-spin" />
                       : <Download className="w-4 h-4" />
+                    }
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(exp)}
+                    disabled={deleting === exp.id}
+                    title="Eliminar"
+                    className="text-slate-600 hover:text-red-400 hover:bg-red-900/20 px-2"
+                  >
+                    {deleting === exp.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Trash2 className="w-3.5 h-3.5" />
                     }
                   </Button>
                 </div>
