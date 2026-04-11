@@ -115,10 +115,11 @@ async function executeSingleOperation(
 
       case 'subtitle': {
         const { srt_path } = op.parameters as { srt_path: string };
-        const escapedPath = safePath(srt_path).replace(/:/g, '\\:');
+        // Embed as soft subtitle track (mov_text) — copies video/audio without re-encoding
+        // Much faster than burning subtitles; compatible with all major players
         cmd = cmd
-          .videoFilters(`subtitles='${escapedPath}'`)
-          .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+          .addInput(safePath(srt_path))
+          .outputOptions(['-c copy', '-c:s mov_text', '-map 0', '-map 1']);
         break;
       }
 
