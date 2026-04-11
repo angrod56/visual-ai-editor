@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Film, Trash2, Clock, HardDrive } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Film, Trash2, Clock, HardDrive, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { VideoProject } from '@/types';
@@ -30,30 +30,71 @@ interface Props {
 
 export function ProjectCard({ project, onDeleted }: Props) {
   const [deleting, setDeleting] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState(project.thumbnail_url ?? null);
+  const [thumbLoading, setThumbLoading] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // If project is ready but has no thumbnail, request one silently
+  useEffect(() => {
+    if (project.status !== 'ready') return;
+    if (thumbnailUrl && !imgError) return;
+
+    let cancelled = false;
+    setThumbLoading(true);
+
+    fetch(`/api/projects/${project.id}/thumbnail`, { method: 'POST' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && data.thumbnail_url) {
+          setThumbnailUrl(data.thumbnail_url);
+          setImgError(false);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setThumbLoading(false); });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id, project.status]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!confirm(`¿Eliminar "${project.title}"?`)) return;
     setDeleting(true);
-
     await fetch(`/api/projects/${project.id}`, { method: 'DELETE' });
     onDeleted();
   };
 
+  const showThumbnail = thumbnailUrl && !imgError;
+
   return (
     <div className="group relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-600 transition-all duration-200">
-      {/* Thumbnail / placeholder */}
+      {/* Thumbnail */}
       <Link href={`/projects/${project.id}`} className="block">
-        <div className="aspect-video bg-slate-800 flex items-center justify-center overflow-hidden">
-          {project.thumbnail_url ? (
+        <div className="aspect-video bg-slate-800 flex items-center justify-center overflow-hidden relative">
+          {showThumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={project.thumbnail_url}
+              src={thumbnailUrl}
               alt={project.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={() => setImgError(true)}
             />
           ) : (
-            <Film className="w-12 h-12 text-slate-600" />
+            <div className="flex flex-col items-center gap-2 text-slate-600">
+              {thumbLoading ? (
+                <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
+              ) : (
+                <Film className="w-12 h-12" />
+              )}
+            </div>
+          )}
+
+          {/* Duration overlay */}
+          {project.duration_seconds != null && showThumbnail && (
+            <span className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+              {formatDuration(project.duration_seconds)}
+            </span>
           )}
         </div>
       </Link>
