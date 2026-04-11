@@ -60,12 +60,19 @@ async function downloadYouTube(url: string, tmpPath: string): Promise<{ title: s
     throw new Error('El video supera los 30 minutos. Elige un video más corto.');
   }
 
-  // Prefer lowest quality with video+audio to minimize download size / time
-  // This avoids hitting Vercel's function timeout on longer videos
-  const format =
-    info.chooseFormat({ type: 'video+audio', quality: 'lowestvideo' }) ??
-    info.chooseFormat({ type: 'video+audio', quality: 'bestefficiency' }) ??
-    info.chooseFormat({ type: 'video+audio' });
+  // Use bestefficiency (smallest file) to reduce download time and avoid timeouts
+  let format;
+  try {
+    format = info.chooseFormat({ type: 'video+audio', quality: 'bestefficiency' });
+  } catch {
+    try {
+      format = info.chooseFormat({ type: 'video+audio', quality: 'best' });
+    } catch {
+      // Last resort: pick the first available video+audio format
+      const fmts = info.streaming_data?.formats ?? [];
+      format = fmts[0] ?? null;
+    }
+  }
 
   if (!format) throw new Error('No se encontró un formato de video compatible');
 
@@ -161,6 +168,9 @@ export async function POST(request: NextRequest) {
     if (dbError) throw new Error(dbError.message);
 
     return NextResponse.json({ project_id: project.id }, { status: 201 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido al importar';
+    return NextResponse.json({ error: message }, { status: 500 });
   } finally {
     await fs.unlink(tmpPath).catch(() => {});
   }
