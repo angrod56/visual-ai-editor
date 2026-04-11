@@ -23,7 +23,7 @@ const nextConfig = {
       '/api/process/metadata': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
       '/api/process/transcribe': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
       '/api/edit/[id]/process': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**', './lib/fonts/**'],
-      '/api/upload/url': ['./node_modules/youtubei.js/**'],
+      '/api/upload/url': ['./node_modules/youtubei.js/**', './node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
     },
   },
   webpack: (config, { isServer }) => {
