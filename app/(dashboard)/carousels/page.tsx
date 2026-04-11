@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   CarouselSlide, CarouselTheme, CAROUSEL_THEMES,
   SlideCanvas, SlideCanvasHandle,
@@ -8,6 +8,7 @@ import {
 import {
   Layout, Loader2, Sparkles, Download,
   ChevronLeft, ChevronRight, ArrowLeft, Pencil,
+  ImagePlus, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -28,6 +29,8 @@ export default function CarouselsPage() {
   const [tone, setTone]         = useState('Educativo');
   const [slideCount, setSlideCount] = useState(7);
 
+  const [ctaText, setCtaText]         = useState('');
+
   // — shared
   const [themeKey, setThemeKey]       = useState('dark');
   const [generating, setGenerating]   = useState(false);
@@ -36,9 +39,44 @@ export default function CarouselsPage() {
   const [carouselTitle, setCarouselTitle] = useState('');
   const [activeIdx, setActiveIdx]     = useState(0);
   const [mode, setMode]               = useState<'form' | 'editor'>('form');
+  const [bgImageDataUrl, setBgImageDataUrl] = useState<string | null>(null);
+  const [bgPreview, setBgPreview]     = useState<string | null>(null);
+  const [draggingOver, setDraggingOver] = useState(false);
+  const bgInputRef = useRef<HTMLInputElement>(null);
 
   const thumbRefs = useRef<(SlideCanvasHandle | null)[]>([]);
   const theme: CarouselTheme = CAROUSEL_THEMES[themeKey];
+
+  // ── Background photo ────────────────────────────────────────────────────
+  const compressBg = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1440;
+        let { width: w, height: h } = img;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round((h * MAX) / w); w = MAX; }
+          else { w = Math.round((w * MAX) / h); h = MAX; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
+  const handleBgFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Solo se aceptan imágenes'); return; }
+    try {
+      const dataUrl = await compressBg(file);
+      setBgImageDataUrl(dataUrl);
+      setBgPreview(dataUrl);
+    } catch { toast.error('Error al cargar la imagen'); }
+  }, []);
 
   // ── Generate ────────────────────────────────────────────────────────────
   const generate = async () => {
@@ -49,7 +87,7 @@ export default function CarouselsPage() {
       const res = await fetch('/api/carousels/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, niche, audience, platform, slideCount, tone }),
+        body: JSON.stringify({ topic, niche, audience, platform, slideCount, tone, ctaText: ctaText.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al generar'); return; }
@@ -197,6 +235,67 @@ export default function CarouselsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* CTA text */}
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Texto del botón CTA (última diapositiva)</label>
+              <input
+                value={ctaText}
+                onChange={(e) => setCtaText(e.target.value)}
+                placeholder="ej: Escríbeme al DM, Visita el link en bio, Compra ahora…"
+                className={FIELD}
+              />
+            </div>
+
+            {/* Background photo */}
+            <div>
+              <label className="text-xs text-zinc-400 mb-1.5 block flex items-center gap-1.5">
+                <ImagePlus className="w-3 h-3" />
+                Foto de fondo
+                <span className="text-zinc-600 font-normal">(opcional)</span>
+              </label>
+              {bgPreview ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    <img src={bgPreview} alt="Fondo" className="w-16 h-16 object-cover rounded-xl border border-zinc-600" />
+                    <button
+                      onClick={() => { setBgImageDataUrl(null); setBgPreview(null); }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-zinc-800 border border-zinc-600 rounded-full flex items-center justify-center hover:bg-red-900/40 hover:border-red-600 transition-colors"
+                    >
+                      <X className="w-3 h-3 text-zinc-400" />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-300 font-medium">Foto cargada</p>
+                    <p className="text-xs text-zinc-500">Se aplicará como fondo en todas las diapositivas</p>
+                    <button onClick={() => bgInputRef.current?.click()} className="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-2 mt-0.5">
+                      Cambiar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => bgInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+                  onDragLeave={() => setDraggingOver(false)}
+                  onDrop={(e) => { e.preventDefault(); setDraggingOver(false); const f = e.dataTransfer.files[0]; if (f) handleBgFile(f); }}
+                  className={cn(
+                    'w-full border-2 border-dashed rounded-xl px-4 py-3 flex items-center gap-3 text-left transition-all',
+                    draggingOver ? 'border-amber-500/60 bg-amber-500/10' : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/50'
+                  )}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-zinc-700 flex items-center justify-center shrink-0">
+                    <ImagePlus className="w-4 h-4 text-zinc-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-zinc-300">Subir foto de fondo</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Arrastra o haz clic · JPG, PNG</p>
+                  </div>
+                </button>
+              )}
+              <input ref={bgInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBgFile(f); e.target.value = ''; }} />
             </div>
 
             <ThemeSelector themeKey={themeKey} onChange={setThemeKey} />
@@ -356,6 +455,7 @@ export default function CarouselsPage() {
                     slideIndex={activeIdx}
                     totalSlides={slides.length}
                     displaySize={420}
+                    backgroundImage={bgImageDataUrl ?? undefined}
                   />
                 </div>
 
@@ -391,6 +491,7 @@ export default function CarouselsPage() {
                       slideIndex={i}
                       totalSlides={slides.length}
                       displaySize={74}
+                      backgroundImage={bgImageDataUrl ?? undefined}
                     />
                   </button>
                 ))}

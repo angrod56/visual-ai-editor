@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 export interface SlideCanvasHandle {
   toDataURL: () => string;
@@ -120,16 +120,31 @@ function wrapText(
 
 // ─── Background ────────────────────────────────────────────────────────────
 
-function drawBackground(ctx: CanvasRenderingContext2D, theme: CarouselTheme, S: number) {
-  if (theme.isGradient && theme.bg2) {
+function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  theme: CarouselTheme,
+  S: number,
+  bgImg?: HTMLImageElement,
+) {
+  if (bgImg) {
+    // Cover-fit: fill canvas maintaining aspect ratio
+    const scale = Math.max(S / bgImg.naturalWidth, S / bgImg.naturalHeight);
+    const dw = bgImg.naturalWidth * scale;
+    const dh = bgImg.naturalHeight * scale;
+    ctx.drawImage(bgImg, (S - dw) / 2, (S - dh) / 2, dw, dh);
+    // Dark scrim so text stays readable
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillRect(0, 0, S, S);
+  } else if (theme.isGradient && theme.bg2) {
     const g = ctx.createLinearGradient(0, 0, S * 0.4, S);
     g.addColorStop(0, theme.bg);
     g.addColorStop(1, theme.bg2);
     ctx.fillStyle = g;
+    ctx.fillRect(0, 0, S, S);
   } else {
     ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, S, S);
   }
-  ctx.fillRect(0, 0, S, S);
 }
 
 // ─── Shared decorative chrome ───────────────────────────────────────────────
@@ -302,9 +317,10 @@ function drawSlide(
   idx: number,
   total: number,
   S: number,
+  bgImg?: HTMLImageElement,
 ) {
   ctx.clearRect(0, 0, S, S);
-  drawBackground(ctx, theme, S);
+  drawBackground(ctx, theme, S, bgImg);
   drawChrome(ctx, theme, S, slide.type);
 
   switch (slide.type) {
@@ -324,13 +340,28 @@ interface Props {
   slideIndex: number;
   totalSlides: number;
   displaySize?: number;
+  backgroundImage?: string; // full data URL
 }
 
 const CANVAS_SIZE = 1080;
 
 export const SlideCanvas = forwardRef<SlideCanvasHandle, Props>(
-  ({ slide, theme, slideIndex, totalSlides, displaySize = 360 }, ref) => {
+  ({ slide, theme, slideIndex, totalSlides, displaySize = 360, backgroundImage }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const bgImgRef  = useRef<HTMLImageElement | null>(null);
+    const [bgReady, setBgReady] = useState(false);
+
+    // Load background image whenever the source changes
+    useEffect(() => {
+      if (!backgroundImage) {
+        bgImgRef.current = null;
+        setBgReady(false);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => { bgImgRef.current = img; setBgReady((v) => !v); };
+      img.src = backgroundImage;
+    }, [backgroundImage]);
 
     useImperativeHandle(ref, () => ({
       toDataURL: () => canvasRef.current?.toDataURL('image/jpeg', 0.95) ?? '',
@@ -345,8 +376,9 @@ export const SlideCanvas = forwardRef<SlideCanvasHandle, Props>(
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      drawSlide(ctx, slide, theme, slideIndex, totalSlides, CANVAS_SIZE);
-    }, [slide, theme, slideIndex, totalSlides]);
+      drawSlide(ctx, slide, theme, slideIndex, totalSlides, CANVAS_SIZE, bgImgRef.current ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slide, theme, slideIndex, totalSlides, bgReady]);
 
     return (
       <canvas

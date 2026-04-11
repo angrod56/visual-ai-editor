@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const { topic, niche, audience, platform = 'Instagram', slideCount = 7, tone = 'Educativo' } = await request.json();
+  const { topic, niche, audience, platform = 'Instagram', slideCount = 7, tone = 'Educativo', ctaText } = await request.json();
   if (!topic) return NextResponse.json({ error: 'topic es requerido' }, { status: 400 });
 
   const count = Math.min(Math.max(slideCount, 4), 12);
@@ -38,6 +38,8 @@ REGLAS DE REDACCIÓN:
 - emoji: 1 emoji relevante y visual (evita genéricos como 📌)
 - highlight: 1 o 2 palabras del headline para resaltar tipográficamente
 - number: "01", "02"... solo para slides de tipo "content"
+
+${ctaText ? `CTA DE LA ÚLTIMA DIAPOSITIVA: El campo "body" de la última slide (tipo "cta") DEBE ser exactamente: "${ctaText}"` : ''}
 
 IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional.
 
