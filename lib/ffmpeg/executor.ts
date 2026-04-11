@@ -257,9 +257,12 @@ function buildAtempoFilters(speed: number): string {
   return filters.join(',');
 }
 
+/** Absolute path to the bundled font used by drawtext (no system fonts needed). */
+const BUNDLED_FONT = path.join(process.cwd(), 'lib', 'fonts', 'DejaVuSans-Bold.ttf');
+
 /**
  * Build an array of drawtext filters for burning subtitles into video.
- * Uses drawtext instead of ass/subtitles to avoid libass/fontconfig dependency.
+ * Uses drawtext with a bundled font — works without libass/fontconfig.
  */
 function buildDrawtextFilters(
   segments: Array<{ start: number; end: number; text: string }>,
@@ -268,20 +271,23 @@ function buildDrawtextFilters(
   const s = getSubtitleStyle(styleId);
   const dt = s.dt;
 
+  // Escape the font path for FFmpeg filter syntax (colons must be escaped)
+  const escapedFont = BUNDLED_FONT.replace(/\\/g, '/').replace(/:/g, '\\:');
+
   return segments.map((seg) => {
-    // Escape special drawtext characters: \, ', :, [, ], ,, ;, =, newlines
+    // Escape text for FFmpeg drawtext: replace special chars
     const text = seg.text.trim()
-      .replace(/\\/g, '\\\\\\\\')
-      .replace(/'/g, "\u2019")   // replace apostrophe with right single quote (avoids escaping hell)
-      .replace(/:/g, '\\:')
-      .replace(/\[/g, '\\[')
-      .replace(/\]/g, '\\]')
-      .replace(/,/g, '\\,')
+      .replace(/\\/g, '/')             // backslash → forward slash
+      .replace(/'/g, '\u2019')         // apostrophe → right single quote (avoids quoting issues)
+      .replace(/:/g, '\u02d0')         // colon → modifier letter triangular colon
+      .replace(/\[/g, '(')
+      .replace(/\]/g, ')')
       .replace(/\n/g, ' ');
 
     const enable = `between(t\\,${seg.start.toFixed(3)}\\,${seg.end.toFixed(3)})`;
 
     const parts = [
+      `fontfile='${escapedFont}'`,
       `text='${text}'`,
       `fontsize=${dt.fontsize}`,
       `fontcolor=${dt.fontcolor}`,
