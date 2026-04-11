@@ -66,6 +66,7 @@ export function OperationHistory({ operations, onDeleted }: Props) {
     try {
       const res = await fetch(`/api/operations/${opId}/cancel`, { method: 'POST' });
       if (res.ok) {
+        onDeleted?.(opId);
         toast.success('Operación cancelada');
       } else {
         toast.error('Error al cancelar');
