@@ -87,11 +87,11 @@ async function executeSingleOperation(
 
       case 'speed': {
         const { speed_factor } = op.parameters as { speed_factor: number };
-        // atempo accepts 0.5–2.0; chain filters for values outside that range
         const atempoFilters = buildAtempoFilters(speed_factor);
         cmd = cmd
           .videoFilters(`setpts=${(1 / speed_factor).toFixed(4)}*PTS`)
-          .audioFilters(atempoFilters);
+          .audioFilters(atempoFilters)
+          .outputOptions(['-preset ultrafast', '-crf 28']);
         break;
       }
 
@@ -99,7 +99,7 @@ async function executeSingleOperation(
         const { width, height } = op.parameters as { width: number; height: number };
         cmd = cmd
           .videoFilters(`scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`)
-          .outputOptions(['-c:a copy']);
+          .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
         break;
       }
 
@@ -109,7 +109,6 @@ async function executeSingleOperation(
           .noVideo()
           .audioCodec(format === 'mp3' ? 'libmp3lame' : format === 'aac' ? 'aac' : 'pcm_s16le')
           .format(format);
-        // Override output path extension
         outputPath = outputPath.replace('.mp4', `.${format}`);
         break;
       }
@@ -119,22 +118,25 @@ async function executeSingleOperation(
         const escapedPath = safePath(srt_path).replace(/:/g, '\\:');
         cmd = cmd
           .videoFilters(`subtitles='${escapedPath}'`)
-          .outputOptions(['-c:a copy']);
+          .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
         break;
       }
 
       case 'filter': {
         const { filter_string } = op.parameters as { filter_string: string };
-        cmd = cmd.complexFilter(filter_string);
+        cmd = cmd
+          .complexFilter(filter_string)
+          .outputOptions(['-preset ultrafast', '-crf 28']);
         break;
       }
 
       case 'concat': {
-        // parameters.files: string[] — additional input files to concatenate
         const { files = [] } = op.parameters as { files?: string[] };
         for (const f of files) cmd = cmd.addInput(f);
         const n = files.length + 1;
-        cmd = cmd.complexFilter(`concat=n=${n}:v=1:a=1[outv][outa]`, ['outv', 'outa']);
+        cmd = cmd
+          .complexFilter(`concat=n=${n}:v=1:a=1[outv][outa]`, ['outv', 'outa'])
+          .outputOptions(['-preset ultrafast', '-crf 28']);
         break;
       }
 
@@ -146,7 +148,8 @@ async function executeSingleOperation(
         };
         cmd = cmd
           .addInput(overlay_path)
-          .complexFilter([`overlay=${x}:${y}`]);
+          .complexFilter([`overlay=${x}:${y}`])
+          .outputOptions(['-preset ultrafast', '-crf 28']);
         break;
       }
     }
