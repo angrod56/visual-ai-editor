@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { EditOperation, EditPlan } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const STATUS_ICONS = {
   pending: Clock,
@@ -33,10 +34,30 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface Props {
   operations: EditOperation[];
+  onDeleted?: (id: string) => void;
 }
 
-export function OperationHistory({ operations }: Props) {
+export function OperationHistory({ operations, onDeleted }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, opId: string) => {
+    e.stopPropagation();
+    setDeleting(opId);
+    try {
+      const res = await fetch(`/api/operations/${opId}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted?.(opId);
+        toast.success('Operación eliminada');
+      } else {
+        toast.error('Error al eliminar');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (operations.length === 0) {
     return (
@@ -54,6 +75,7 @@ export function OperationHistory({ operations }: Props) {
           const Icon = STATUS_ICONS[op.status] ?? Clock;
           const plan = op.ai_interpretation as EditPlan;
           const isExpanded = expanded === op.id;
+          const canDelete = op.status === 'failed' || op.status === 'needs_clarification';
 
           return (
             <div
@@ -74,11 +96,19 @@ export function OperationHistory({ operations }: Props) {
                   )}
                 />
                 <p className="flex-1 text-sm text-slate-300 truncate">{op.instruction}</p>
-                <Badge
-                  className={cn('shrink-0 text-xs border', STATUS_COLORS[op.status])}
-                >
+                <Badge className={cn('shrink-0 text-xs border', STATUS_COLORS[op.status])}>
                   {STATUS_LABELS[op.status]}
                 </Badge>
+                {canDelete && (
+                  <button
+                    onClick={(e) => handleDelete(e, op.id)}
+                    disabled={deleting === op.id}
+                    className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
                 ) : (

@@ -231,7 +231,10 @@ export default function ProjectEditorPage() {
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-white mb-3">Historial de ediciones</h3>
-              <OperationHistory operations={operations} />
+              <OperationHistory
+                operations={operations}
+                onDeleted={(id) => setOperations((prev) => prev.filter((op) => op.id !== id))}
+              />
             </div>
           </div>
 
