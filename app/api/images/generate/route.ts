@@ -38,14 +38,33 @@ async function generateOneWithGemini(prompt: string): Promise<Buffer | null> {
   return null;
 }
 
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function generateWithRetry(prompt: string, attempt = 0): Promise<Buffer | null> {
+  try {
+    const result = await generateOneWithGemini(prompt);
+    return result;
+  } catch (err) {
+    if (attempt < 2) {
+      await sleep(1500 * (attempt + 1)); // 1.5s, 3s
+      return generateWithRetry(prompt, attempt + 1);
+    }
+    console.error('Gemini image generation failed after retries:', err);
+    return null;
+  }
+}
+
 async function generateWithGemini(prompt: string, count: number): Promise<Buffer[]> {
-  // Run all generations in parallel
-  const results = await Promise.allSettled(
-    Array.from({ length: count }, () => generateOneWithGemini(prompt))
-  );
-  return results
-    .filter((r): r is PromiseFulfilledResult<Buffer> => r.status === 'fulfilled' && r.value !== null)
-    .map((r) => r.value);
+  // Stagger requests to avoid rate limits (600ms apart)
+  const buffers: Buffer[] = [];
+  for (let i = 0; i < count; i++) {
+    if (i > 0) await sleep(600);
+    const buf = await generateWithRetry(prompt);
+    if (buf) buffers.push(buf);
+  }
+  return buffers;
 }
 
 async function generateWithDalle3(prompt: string, format: string, quality: string): Promise<Buffer> {
