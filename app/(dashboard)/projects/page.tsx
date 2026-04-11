@@ -4,14 +4,19 @@ import { useEffect, useState } from 'react';
 import { VideoProject } from '@/types';
 import { ProjectCard } from '@/components/dashboard/ProjectCard';
 import { UploadZone } from '@/components/dashboard/UploadZone';
-import { PlusCircle, Film } from 'lucide-react';
+import { UrlUpload } from '@/components/dashboard/UrlUpload';
+import { PlusCircle, Film, Upload, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+
+type UploadTab = 'file' | 'url';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<VideoProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
+  const [uploadTab, setUploadTab] = useState<UploadTab>('file');
 
   const fetchProjects = async () => {
     const res = await fetch('/api/projects');
@@ -25,6 +30,11 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  const handleUploadSuccess = () => {
+    setShowUpload(false);
+    fetchProjects();
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -41,7 +51,7 @@ export default function ProjectsPage() {
           className="bg-purple-600 hover:bg-purple-700 text-white font-medium gap-2"
         >
           <PlusCircle className="w-4 h-4" />
-          Subir video
+          Agregar video
         </Button>
       </div>
 
@@ -49,9 +59,42 @@ export default function ProjectsPage() {
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
         <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-white">Subir nuevo video</DialogTitle>
+            <DialogTitle className="text-white">Agregar video</DialogTitle>
           </DialogHeader>
-          <UploadZone />
+
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-slate-800 rounded-lg">
+            <button
+              onClick={() => setUploadTab('file')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all',
+                uploadTab === 'file'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-white'
+              )}
+            >
+              <Upload className="w-4 h-4" />
+              Subir archivo
+            </button>
+            <button
+              onClick={() => setUploadTab('url')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-all',
+                uploadTab === 'url'
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-white'
+              )}
+            >
+              <Link className="w-4 h-4" />
+              Pegar URL
+            </button>
+          </div>
+
+          {uploadTab === 'file' ? (
+            <UploadZone />
+          ) : (
+            <UrlUpload onSuccess={handleUploadSuccess} />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -64,10 +107,16 @@ export default function ProjectsPage() {
           <div>
             <h3 className="text-lg font-semibold text-white">No tienes videos aún</h3>
             <p className="text-slate-400 text-sm mt-1">
-              Sube tu primer video y empieza a editarlo con IA
+              Sube un archivo o pega un link de YouTube para comenzar
             </p>
           </div>
-          <UploadZone />
+          <Button
+            onClick={() => setShowUpload(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Agregar primer video
+          </Button>
         </div>
       )}
 

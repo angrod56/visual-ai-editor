@@ -14,6 +14,7 @@ const nextConfig = {
     'fluent-ffmpeg',
     '@ffmpeg-installer/ffmpeg',
     '@ffprobe-installer/ffprobe',
+    '@distube/ytdl-core',
   ],
   // Tell Vercel's file tracer to include ffmpeg/ffprobe binaries in the deployment bundle
   experimental: {
@@ -21,6 +22,7 @@ const nextConfig = {
       '/api/process/metadata': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
       '/api/process/transcribe': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
       '/api/edit/[id]/process': ['./node_modules/@ffmpeg-installer/**', './node_modules/@ffprobe-installer/**', './node_modules/fluent-ffmpeg/**'],
+      '/api/upload/url': ['./node_modules/@distube/ytdl-core/**'],
     },
   },
   webpack: (config, { isServer }) => {
