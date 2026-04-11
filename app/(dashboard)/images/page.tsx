@@ -19,8 +19,8 @@ const FORMATS = [
 type FormatId = typeof FORMATS[number]['id'];
 
 const PROVIDERS = [
-  { id: 'imagen3', label: 'Imagen 3', sublabel: 'Google · Recomendado', color: 'sky' },
-  { id: 'dalle3',  label: 'DALL-E 3', sublabel: 'OpenAI',               color: 'violet' },
+  { id: 'gemini', label: 'Gemini Flash', sublabel: 'Google · Recomendado', color: 'sky' },
+  { id: 'dalle3', label: 'DALL-E 3',     sublabel: 'OpenAI',               color: 'violet' },
 ] as const;
 
 type ProviderId = typeof PROVIDERS[number]['id'];
@@ -30,7 +30,7 @@ export default function ImagesPage() {
   const [format, setFormat] = useState<FormatId>('square');
   const [count, setCount] = useState(4);
   const [quality, setQuality] = useState<'standard' | 'hd'>('standard');
-  const [provider, setProvider] = useState<ProviderId>('imagen3');
+  const [provider, setProvider] = useState<ProviderId>('gemini');
   const [generating, setGenerating] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
@@ -82,7 +82,7 @@ export default function ImagesPage() {
   };
 
   const selectedFormat = FORMATS.find((f) => f.id === format)!;
-  const estimatedSeconds = provider === 'imagen3' ? Math.ceil(count * 4) : Math.ceil(count * 12);
+  const estimatedSeconds = provider === 'gemini' ? Math.ceil(count * 10) : Math.ceil(count * 12);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8">
@@ -139,7 +139,7 @@ export default function ImagesPage() {
                     {p.label}
                   </p>
                   <p className="text-xs text-zinc-500 mt-0.5">{p.sublabel}</p>
-                  {p.id === 'imagen3' && (
+                  {p.id === 'gemini' && (
                     <span className="inline-block mt-1.5 text-[10px] px-1.5 py-0.5 bg-sky-500/20 text-sky-400 rounded-md font-medium">
                       Más rápido · Más formatos
                     </span>
@@ -242,7 +242,7 @@ export default function ImagesPage() {
               </div>
             )}
 
-            {provider === 'imagen3' && (
+            {provider === 'gemini' && (
               <div className="flex items-end">
                 <div className="w-full p-2.5 bg-sky-900/10 border border-sky-800/30 rounded-xl">
                   <p className="text-xs text-sky-400 font-medium">Imagen 3 Pro</p>

@@ -4,60 +4,51 @@ import { uploadBuffer } from '@/lib/utils/storage';
 
 // DALL-E 3 format mapping
 const DALLE_FORMATS: Record<string, { size: '1024x1024' | '1024x1792' | '1792x1024'; width: number; height: number }> = {
-  square:    { size: '1024x1024',  width: 1024, height: 1024 },
-  portrait:  { size: '1024x1792',  width: 1024, height: 1792 },
-  landscape: { size: '1792x1024',  width: 1792, height: 1024 },
+  square:     { size: '1024x1024',  width: 1024, height: 1024 },
+  portrait:   { size: '1024x1792',  width: 1024, height: 1792 },
+  portrait43: { size: '1024x1792',  width: 1024, height: 1365 },
+  landscape:  { size: '1792x1024',  width: 1792, height: 1024 },
 };
 
-// Imagen 3 native aspect ratios
-const IMAGEN_ASPECT_RATIOS: Record<string, string> = {
-  square:    '1:1',
-  portrait:  '9:16',
-  landscape: '16:9',
-  portrait43: '3:4',
-};
-
-const IMAGEN_DIMENSIONS: Record<string, { width: number; height: number }> = {
+const GEMINI_DIMENSIONS: Record<string, { width: number; height: number }> = {
   square:     { width: 1024, height: 1024 },
   portrait:   { width: 1024, height: 1792 },
-  landscape:  { width: 1792, height: 1024 },
   portrait43: { width: 1024, height: 1365 },
+  landscape:  { width: 1792, height: 1024 },
 };
 
-async function generateWithImagen3(
-  prompt: string,
-  format: string,
-  count: number
-): Promise<Buffer[]> {
+// Generate one image with Gemini 2.0 Flash image generation
+async function generateOneWithGemini(prompt: string): Promise<Buffer | null> {
   const { GoogleGenAI } = await import('@google/genai');
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-  const aspectRatio = IMAGEN_ASPECT_RATIOS[format] ?? '1:1';
-
-  const response = await ai.models.generateImages({
-    model: 'imagen-3.0-generate-001',
-    prompt: `${prompt}. Professional advertising photo, high quality, suitable for Meta ads, commercial photography style.`,
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash-preview-image-generation',
+    contents: `${prompt}. Professional advertising photo, high quality, suitable for Meta ads, commercial photography style.`,
     config: {
-      numberOfImages: count,
-      aspectRatio: aspectRatio as '1:1' | '9:16' | '16:9' | '3:4' | '4:3',
-      outputMimeType: 'image/jpeg',
+      responseModalities: ['IMAGE'],
     },
   });
 
-  const bufferList: Buffer[] = [];
-  for (const img of response.generatedImages ?? []) {
-    if (img.image?.imageBytes) {
-      bufferList.push(Buffer.from(img.image.imageBytes, 'base64'));
+  for (const part of response.candidates?.[0]?.content?.parts ?? []) {
+    if (part.inlineData?.data) {
+      return Buffer.from(part.inlineData.data, 'base64');
     }
   }
-  return bufferList;
+  return null;
 }
 
-async function generateWithDalle3(
-  prompt: string,
-  format: string,
-  quality: string
-): Promise<Buffer> {
+async function generateWithGemini(prompt: string, count: number): Promise<Buffer[]> {
+  // Run all generations in parallel
+  const results = await Promise.allSettled(
+    Array.from({ length: count }, () => generateOneWithGemini(prompt))
+  );
+  return results
+    .filter((r): r is PromiseFulfilledResult<Buffer> => r.status === 'fulfilled' && r.value !== null)
+    .map((r) => r.value);
+}
+
+async function generateWithDalle3(prompt: string, format: string, quality: string): Promise<Buffer> {
   const OpenAI = (await import('openai')).default;
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -88,7 +79,7 @@ export async function POST(request: NextRequest) {
     format = 'square',
     count = 2,
     quality = 'standard',
-    provider = 'imagen3',
+    provider = 'gemini',
     topic,
     platform,
     script_data,
@@ -97,19 +88,18 @@ export async function POST(request: NextRequest) {
   if (!prompt) return NextResponse.json({ error: 'prompt es requerido' }, { status: 400 });
 
   const batchSize = Math.min(Math.max(count, 1), 4);
-  const useImagen = provider === 'imagen3' && !!process.env.GEMINI_API_KEY;
+  const useGemini = provider === 'gemini' && !!process.env.GEMINI_API_KEY;
 
-  const dimensions = useImagen
-    ? (IMAGEN_DIMENSIONS[format] ?? IMAGEN_DIMENSIONS.square)
+  const dimensions = useGemini
+    ? (GEMINI_DIMENSIONS[format] ?? GEMINI_DIMENSIONS.square)
     : { width: DALLE_FORMATS[format]?.width ?? 1024, height: DALLE_FORMATS[format]?.height ?? 1024 };
 
   let buffers: Buffer[] = [];
 
   try {
-    if (useImagen) {
-      buffers = await generateWithImagen3(prompt, format, batchSize);
+    if (useGemini) {
+      buffers = await generateWithGemini(prompt, batchSize);
     } else {
-      // DALL-E 3: one request per image, run in parallel
       const results = await Promise.allSettled(
         Array.from({ length: batchSize }, () => generateWithDalle3(prompt, format, quality))
       );
@@ -121,7 +111,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 
-  // Upload all buffers and insert DB records
   const insertions = buffers.map(async (buffer) => {
     const imageId = crypto.randomUUID();
     const storagePath = `images/${user.id}/${imageId}.jpg`;
@@ -139,7 +128,7 @@ export async function POST(request: NextRequest) {
         height: dimensions.height,
         storage_path: storagePath,
         script_data: script_data ?? null,
-        model: useImagen ? 'imagen-3' : `dall-e-3-${quality}`,
+        model: useGemini ? 'gemini-2.0-flash-image' : `dall-e-3-${quality}`,
         status: 'completed',
       })
       .select()
