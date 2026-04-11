@@ -101,49 +101,59 @@ export function OperationHistory({ operations, onDeleted }: Props) {
               key={op.id}
               className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden"
             >
-              <button
+              <div
+                className="w-full p-3 hover:bg-slate-700/50 transition-colors cursor-pointer"
                 onClick={() => setExpanded(isExpanded ? null : op.id)}
-                className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-700/50 transition-colors"
               >
-                <Icon
-                  className={cn(
-                    'w-4 h-4 shrink-0',
-                    op.status === 'completed' ? 'text-green-400' :
-                    op.status === 'failed' ? 'text-red-400' :
-                    op.status === 'processing' ? 'text-blue-400 animate-spin' :
-                    'text-slate-400'
+                {/* Row 1: icon + instruction + chevron */}
+                <div className="flex items-center gap-2">
+                  <Icon
+                    className={cn(
+                      'w-4 h-4 shrink-0',
+                      op.status === 'completed' ? 'text-green-400' :
+                      op.status === 'failed' ? 'text-red-400' :
+                      op.status === 'processing' ? 'text-blue-400 animate-spin' :
+                      'text-slate-400'
+                    )}
+                  />
+                  <p className="flex-1 text-sm text-slate-300 truncate">{op.instruction}</p>
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
                   )}
-                />
-                <p className="flex-1 text-sm text-slate-300 truncate">{op.instruction}</p>
-                <Badge className={cn('shrink-0 text-xs border', STATUS_COLORS[op.status])}>
-                  {STATUS_LABELS[op.status]}
-                </Badge>
-                {canCancel && (
-                  <button
-                    onClick={(e) => handleCancel(e, op.id)}
-                    disabled={cancelling === op.id}
-                    className="p-1 text-slate-500 hover:text-orange-400 transition-colors shrink-0"
-                    title="Detener"
-                  >
-                    <StopCircle className={cn('w-3.5 h-3.5', cancelling === op.id && 'animate-spin')} />
-                  </button>
-                )}
-                {canDelete && (
-                  <button
-                    onClick={(e) => handleDelete(e, op.id)}
-                    disabled={deleting === op.id}
-                    className="p-1 text-slate-500 hover:text-red-400 transition-colors shrink-0"
-                    title="Eliminar"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
-                )}
-              </button>
+                </div>
+
+                {/* Row 2: badge + action buttons */}
+                <div className="flex items-center gap-2 mt-2 pl-6">
+                  <Badge className={cn('text-xs border', STATUS_COLORS[op.status])}>
+                    {STATUS_LABELS[op.status]}
+                  </Badge>
+                  <div className="flex-1" />
+                  {canCancel && (
+                    <button
+                      onClick={(e) => handleCancel(e, op.id)}
+                      disabled={cancelling === op.id}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-orange-400 hover:bg-orange-900/20 rounded transition-colors"
+                      title="Detener"
+                    >
+                      <StopCircle className={cn('w-3.5 h-3.5', cancelling === op.id && 'animate-spin')} />
+                      Detener
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => handleDelete(e, op.id)}
+                      disabled={deleting === op.id}
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Eliminar
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {isExpanded && (
                 <div className="px-3 pb-3 space-y-2 border-t border-slate-700 pt-2">
