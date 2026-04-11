@@ -8,12 +8,30 @@ import path from 'path';
 
 export const maxDuration = 300;
 
-// Lazy load ytdl to avoid build-time issues
+// Lazy-load Innertube to avoid module-init issues on Vercel
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let ytdl: any = null;
-function getYtdl() {
-  if (!ytdl) ytdl = require('@distube/ytdl-core');
-  return ytdl;
+let _Innertube: any = null;
+async function getInnertube() {
+  if (!_Innertube) {
+    const mod = await import('youtubei.js');
+    _Innertube = mod.Innertube;
+  }
+  return _Innertube;
+}
+
+/** Extract YouTube video ID from any standard URL format */
+function extractVideoId(url: string): string | null {
+  const patterns = [
+    /[?&]v=([^&]+)/,
+    /youtu\.be\/([^?&]+)/,
+    /youtube\.com\/embed\/([^?&]+)/,
+    /youtube\.com\/shorts\/([^?&]+)/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m?.[1]) return m[1];
+  }
+  return null;
 }
 
 type Platform = 'youtube' | 'instagram' | 'tiktok' | 'unknown';
@@ -25,40 +43,38 @@ function detectPlatform(url: string): Platform {
   return 'unknown';
 }
 
-/** Download a YouTube video to a local tmp file, returns the path */
+/** Download a YouTube video using Innertube (internal YouTube API — no bot-blocking) */
 async function downloadYouTube(url: string, tmpPath: string): Promise<{ title: string }> {
-  const lib = getYtdl();
+  const videoId = extractVideoId(url);
+  if (!videoId) throw new Error('No se pudo extraer el ID del video de YouTube');
 
-  // Get info first to validate and get title
-  const info = await lib.getInfo(url);
-  const title: string = info.videoDetails.title ?? 'video';
-  const durationSec = parseInt(info.videoDetails.lengthSeconds ?? '0', 10);
+  const Innertube = await getInnertube();
+  const yt = await Innertube.create({ generate_session_locally: true });
+
+  const info = await yt.getBasicInfo(videoId, 'WEB');
+
+  const title: string = info.basic_info.title ?? 'video';
+  const durationSec: number = info.basic_info.duration ?? 0;
 
   if (durationSec > 30 * 60) {
-    throw new Error('El video supera los 30 minutos. Sube un video más corto.');
+    throw new Error('El video supera los 30 minutos. Elige un video más corto.');
   }
 
-  // Pick best format with both video+audio, prefer mp4
-  const format = lib.chooseFormat(info.formats, {
-    quality: 'highestvideo',
-    filter: (f: { hasVideo: boolean; hasAudio: boolean; container: string }) =>
-      f.hasVideo && f.hasAudio && f.container === 'mp4',
-  }) ?? lib.chooseFormat(info.formats, { quality: 'highest', filter: 'audioandvideo' });
-
+  // Choose best format: video+audio, mp4 preferred
+  const format = info.chooseFormat({ type: 'video+audio', quality: 'bestefficiency' });
   if (!format) throw new Error('No se encontró un formato de video compatible');
 
-  return new Promise((resolve, reject) => {
-    const stream = lib(url, { format });
-    const chunks: Buffer[] = [];
+  const streamUrl = format.decipher(yt.session.player);
 
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('end', async () => {
-      const buffer = Buffer.concat(chunks);
-      await fs.writeFile(tmpPath, buffer);
-      resolve({ title });
-    });
-    stream.on('error', (err: Error) => reject(new Error(`Error al descargar YouTube: ${err.message}`)));
-  });
+  // Download via fetch
+  const response = await fetch(streamUrl);
+  if (!response.ok) throw new Error(`Error al descargar stream: ${response.status}`);
+
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  await fs.writeFile(tmpPath, buffer);
+
+  return { title };
 }
 
 export async function POST(request: NextRequest) {
@@ -78,7 +94,7 @@ export async function POST(request: NextRequest) {
   if (platform === 'instagram' || platform === 'tiktok') {
     return NextResponse.json(
       {
-        error: `${platform === 'instagram' ? 'Instagram' : 'TikTok'} requiere descarga manual por restricciones de la plataforma. Descarga el video y súbelo directamente.`,
+        error: `${platform === 'instagram' ? 'Instagram' : 'TikTok'} requiere descarga manual. Descarga el video y súbelo directamente.`,
         platform,
       },
       { status: 422 }
@@ -96,10 +112,8 @@ export async function POST(request: NextRequest) {
   const tmpPath = path.join('/tmp', `${projectId}_yt.mp4`);
 
   try {
-    // Download from YouTube
     const { title } = await downloadYouTube(url, tmpPath);
 
-    // Read downloaded file
     const buffer = await fs.readFile(tmpPath);
 
     if (buffer.length > 500 * 1024 * 1024) {
@@ -109,10 +123,8 @@ export async function POST(request: NextRequest) {
     const filename = `${title.replace(/[^\w\s-]/g, '').trim().slice(0, 80)}.mp4`;
     const storagePath = buildOriginalPath(user.id, projectId, filename);
 
-    // Upload to R2
     await uploadBuffer(buffer, storagePath, 'video/mp4');
 
-    // Create project record
     const { data: project, error: dbError } = await supabase
       .from('video_projects')
       .insert({
