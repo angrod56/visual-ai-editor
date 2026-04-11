@@ -239,12 +239,14 @@ export default function ProjectEditorPage() {
               </div>
             )}
 
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Historial de ediciones</h3>
-              <OperationHistory
-                operations={operations}
-                onDeleted={handleOperationDeleted}
-              />
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col max-h-[480px]">
+              <h3 className="text-sm font-semibold text-white mb-3 shrink-0">Historial de ediciones</h3>
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <OperationHistory
+                  operations={operations}
+                  onDeleted={handleOperationDeleted}
+                />
+              </div>
             </div>
           </div>
 

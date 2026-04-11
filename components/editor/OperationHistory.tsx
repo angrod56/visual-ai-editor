@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { EditOperation, EditPlan } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock, HelpCircle, Loader2, Trash2, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -88,9 +87,8 @@ export function OperationHistory({ operations, onDeleted }: Props) {
   }
 
   return (
-    <ScrollArea className="max-h-96">
-      <div className="space-y-2 pr-2">
-        {[...operations].reverse().map((op) => {
+    <div className="space-y-2 pr-1">
+      {[...operations].reverse().map((op) => {
           const Icon = STATUS_ICONS[op.status] ?? Clock;
           const plan = op.ai_interpretation as EditPlan;
           const isExpanded = expanded === op.id;
@@ -186,7 +184,6 @@ export function OperationHistory({ operations, onDeleted }: Props) {
             </div>
           );
         })}
-      </div>
-    </ScrollArea>
+    </div>
   );
 }
