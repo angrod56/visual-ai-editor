@@ -1,0 +1,179 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { TrendingUp, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+type Stage = 'idle' | 'downloading' | 'transcribing' | 'analyzing' | 'done';
+
+const STAGES: Record<Stage, { label: string; sub: string }> = {
+  idle: { label: '', sub: '' },
+  downloading: { label: 'Descargando video...', sub: 'Obteniendo el video de YouTube' },
+  transcribing: { label: 'Transcribiendo con IA...', sub: 'Whisper analiza el audio' },
+  analyzing: { label: 'Detectando momentos virales...', sub: 'Claude busca los mejores hooks' },
+  done: { label: '¡Clips encontrados!', sub: 'Abriendo el editor...' },
+};
+
+const STAGE_ORDER: Stage[] = ['downloading', 'transcribing', 'analyzing', 'done'];
+
+export function ViralClipsFromUrl() {
+  const router = useRouter();
+  const [url, setUrl] = useState('');
+  const [stage, setStage] = useState<Stage>('idle');
+
+  const isYouTube = /youtube\.com|youtu\.be/.test(url);
+  const isBusy = stage !== 'idle' && stage !== 'done';
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url.trim() || !isYouTube || isBusy) return;
+
+    try {
+      // 1. Download
+      setStage('downloading');
+      const uploadRes = await fetch('/api/upload/url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        toast.error(uploadData.error ?? 'Error al descargar el video');
+        setStage('idle');
+        return;
+      }
+      const projectId: string = uploadData.project_id;
+
+      // 2. Metadata
+      await fetch('/api/process/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId }),
+      });
+
+      // 3. Transcribe
+      setStage('transcribing');
+      const transcribeRes = await fetch('/api/process/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId }),
+      });
+      if (!transcribeRes.ok) {
+        toast.error('Error al transcribir el video');
+        setStage('idle');
+        return;
+      }
+
+      // 4. Generate viral clips
+      setStage('analyzing');
+      const clipsRes = await fetch(`/api/projects/${projectId}/viral-clips`, { method: 'POST' });
+      const clipsData = await clipsRes.json();
+      if (!clipsRes.ok) {
+        // Still redirect even if clips failed — user can generate manually in editor
+        toast.warning(clipsData.error ?? 'No se encontraron clips virales');
+      } else {
+        toast.success(`${clipsData.clips?.length ?? 0} clips virales en procesamiento`);
+      }
+
+      // 5. Redirect to editor
+      setStage('done');
+      setTimeout(() => router.push(`/projects/${projectId}`), 600);
+    } catch {
+      toast.error('Error de conexión');
+      setStage('idle');
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-950/30 via-slate-900 to-purple-950/30 p-6">
+      {/* Background glow */}
+      <div className="absolute -top-12 -right-12 w-48 h-48 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative space-y-4">
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-pink-600/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-5 h-5 text-pink-400" />
+          </div>
+          <div>
+            <h2 className="font-bold text-white text-base">Clips virales desde YouTube</h2>
+            <p className="text-sm text-slate-400 mt-0.5">
+              Pega un link y la IA detecta los mejores momentos para TikTok, Reels y Shorts
+            </p>
+          </div>
+        </div>
+
+        {/* Input form */}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://youtube.com/watch?v=..."
+            disabled={isBusy}
+            className="flex-1 bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 focus:border-pink-500 h-10"
+          />
+          <Button
+            type="submit"
+            disabled={!isYouTube || isBusy}
+            className="bg-pink-600 hover:bg-pink-700 disabled:opacity-40 text-white font-semibold gap-2 h-10 shrink-0 px-5"
+          >
+            {isBusy ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : stage === 'done' ? (
+              <CheckCircle2 className="w-4 h-4" />
+            ) : (
+              <ArrowRight className="w-4 h-4" />
+            )}
+            {stage === 'idle' ? 'Generar clips' : STAGES[stage].label || 'Generar clips'}
+          </Button>
+        </form>
+
+        {/* Progress stages */}
+        {stage !== 'idle' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {STAGE_ORDER.map((s, i) => {
+              const stageIdx = STAGE_ORDER.indexOf(stage);
+              const isDone = i < stageIdx || stage === 'done';
+              const isActive = s === stage;
+              return (
+                <div key={s} className="flex items-center gap-1.5">
+                  {i > 0 && <div className={cn('w-4 h-px', isDone ? 'bg-pink-500' : 'bg-slate-700')} />}
+                  <div className={cn(
+                    'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all',
+                    isDone
+                      ? 'bg-pink-900/30 border-pink-700/50 text-pink-300'
+                      : isActive
+                      ? 'bg-pink-600/20 border-pink-500 text-white'
+                      : 'bg-slate-800/60 border-slate-700 text-slate-600'
+                  )}>
+                    {isDone
+                      ? <CheckCircle2 className="w-3 h-3" />
+                      : isActive
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <div className="w-3 h-3 rounded-full border border-current opacity-40" />
+                    }
+                    {STAGES[s].label || s}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Sub-label during processing */}
+        {isBusy && STAGES[stage].sub && (
+          <p className="text-xs text-slate-500 animate-pulse">{STAGES[stage].sub}</p>
+        )}
+
+        <p className="text-xs text-slate-600">
+          YouTube · Máximo 30 min · El video se guarda en tu biblioteca
+        </p>
+      </div>
+    </div>
+  );
+}
