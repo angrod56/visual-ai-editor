@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { GeneratedImage } from '@/types';
-import { Download, Trash2, Loader2, CheckSquare, Square, DownloadCloud } from 'lucide-react';
+import { Download, Trash2, Loader2, CheckSquare, Square, DownloadCloud, Type } from 'lucide-react';
+import { AdTextEditor } from './AdTextEditor';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ export function ImageGallery({ images, onDeleted }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [editingImage, setEditingImage] = useState<GeneratedImage | null>(null);
 
   const handleDelete = async (img: GeneratedImage) => {
     setDeleting(img.id);
@@ -176,6 +178,13 @@ export function ImageGallery({ images, onDeleted }: Props) {
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                   <button
+                    onClick={() => setEditingImage(img)}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2 bg-sky-600/90 hover:bg-sky-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    <Type className="w-3.5 h-3.5" />
+                    Texto
+                  </button>
+                  <button
                     onClick={() => downloadImage(img)}
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-amber-500/90 hover:bg-amber-500 text-black text-xs font-semibold rounded-lg transition-colors"
                   >
@@ -205,6 +214,14 @@ export function ImageGallery({ images, onDeleted }: Props) {
           );
         })}
       </div>
+
+      {editingImage && (
+        <AdTextEditor
+          image={editingImage}
+          scriptData={editingImage.script_data}
+          onClose={() => setEditingImage(null)}
+        />
+      )}
     </div>
   );
 }

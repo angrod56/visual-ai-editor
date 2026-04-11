@@ -24,7 +24,7 @@ async function generateOneWithGemini(prompt: string): Promise<Buffer | null> {
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.0-flash-preview-image-generation',
-    contents: `${prompt}. Professional advertising photo, high quality, suitable for Meta ads, commercial photography style.`,
+    contents: `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, 8K quality, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated, not AI-looking.`,
     config: {
       responseModalities: ['IMAGE'],
     },
@@ -56,7 +56,7 @@ async function generateWithDalle3(prompt: string, format: string, quality: strin
 
   const response = await openai.images.generate({
     model: 'dall-e-3',
-    prompt: `${prompt}. Professional advertising photo, high quality, suitable for Meta ads, commercial photography style.`,
+    prompt: `${prompt}. Hyperrealistic commercial photography. Ultra high resolution, 8K quality, sharp focus, professional color grading, suitable for premium Meta advertising campaigns. Photorealistic, not illustrated, not AI-looking.`,
     size: fmt.size,
     quality: quality as 'standard' | 'hd',
     n: 1,

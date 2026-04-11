@@ -17,20 +17,29 @@ export async function POST(request: NextRequest) {
     max_tokens: 3000,
     messages: [{
       role: 'user',
-      content: `Eres un experto en publicidad digital y copywriting para Meta Ads (Facebook/Instagram).
+      content: `Eres un director creativo senior especializado en Meta Ads de alta conversión (Facebook/Instagram). Tu trabajo es crear scripts de anuncios que detengan el scroll y generen ventas reales.
 
-Genera ${count} scripts profesionales y diferentes entre sí para anuncios sobre:
+Genera ${count} scripts DIFERENTES entre sí para:
 PRODUCTO/SERVICIO: "${topic}"
 AUDIENCIA: ${audience || 'adultos en general interesados en el tema'}
 PLATAFORMA: ${platform || 'Instagram y Facebook'}
 TONO: ${tone || 'profesional, persuasivo y cercano'}
 
 Cada script debe incluir:
-- hook: frase que detiene el scroll y genera curiosidad (máx 12 palabras, en español)
-- body: cuerpo del mensaje, claro y persuasivo (2-3 oraciones en español)
-- cta: llamada a la acción directa y urgente (máx 6 palabras en español)
-- hashtags: 6 hashtags relevantes en español e inglés
-- visual_description: descripción detallada en INGLÉS para generar la imagen con IA. Debe especificar: tipo de fotografía, sujeto principal, ambiente, iluminación, paleta de colores, composición, estilo (ej: "cinematic product photography of..."). Debe ser profesional y apta para publicidad.
+- hook: frase de impacto que detiene el scroll en menos de 2 segundos (máx 10 palabras, en español, sin signos de interrogación genéricos)
+- body: cuerpo persuasivo con beneficio claro + prueba social o urgencia (2-3 oraciones en español)
+- cta: llamada a la acción directa e irresistible (máx 6 palabras en español)
+- hashtags: 6 hashtags relevantes mezclando español e inglés
+- visual_description: prompt profesional en INGLÉS para generar una fotografía comercial fotorrealista de alta calidad con IA. DEBE incluir obligatoriamente:
+  * Tipo exacto de fotografía (product photography, lifestyle portrait, editorial fashion, etc.)
+  * Sujeto principal con descripción detallada
+  * Ángulo de cámara (eye-level, low angle, top-down, etc.)
+  * Iluminación profesional (soft box studio lighting, golden hour, cinematic lighting, rim light, etc.)
+  * Fondo/ambiente detallado (clean white backdrop, blurred urban background, luxury interior, etc.)
+  * Paleta de colores dominante
+  * Composición (rule of thirds, centered, negative space on left/right/top/bottom for text overlay)
+  * Estilo fotográfico (hyperrealistic, photojournalistic, luxury commercial, etc.)
+  * Instrucción: "NO text, logos, watermarks, or graphics. Leave [top/bottom] area with clean space for advertising text overlay. Shot on Sony A7R V, 85mm lens, f/1.8."
 
 IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional, sin bloques de código.
 {
