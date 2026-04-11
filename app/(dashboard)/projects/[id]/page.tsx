@@ -46,8 +46,12 @@ export default function ProjectEditorPage() {
         const proj: VideoProject = await projectRes.json();
         setProject(proj);
 
-        // Use proxy route — avoids CORS issues with R2
-        setVideoUrl(`/api/projects/${id}/video`);
+        // Get signed URL for video from R2 via API
+        const urlRes = await fetch(`/api/projects/${id}/signed-url`);
+        if (urlRes.ok) {
+          const { signed_url } = await urlRes.json();
+          setVideoUrl(signed_url);
+        }
       }
 
       if (opsRes.ok) setOperations(await opsRes.json());
