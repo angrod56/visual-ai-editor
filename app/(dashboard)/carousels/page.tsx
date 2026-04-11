@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CarouselSlide, CarouselTheme, CAROUSEL_THEMES,
   SlideCanvas, SlideCanvasHandle,
@@ -9,6 +9,7 @@ import {
   Layout, Loader2, Sparkles, Download,
   ChevronLeft, ChevronRight, ArrowLeft,
   ImagePlus, X, ChevronDown, Image as ImageIcon,
+  Save, FolderOpen, Trash2, Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -51,8 +52,81 @@ export default function CarouselsPage() {
   // — accordion: Set of indices whose fields are expanded
   const [openSlides, setOpenSlides] = useState<Set<number>>(new Set());
 
+  // — history
+  type CarouselRecord = { id: string; title: string; topic: string; theme_key: string; slide_count: number; created_at: string };
+  const [history, setHistory]     = useState<CarouselRecord[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [savedId, setSavedId]     = useState<string | null>(null); // current carousel's DB id
+
   const thumbRefs = useRef<(SlideCanvasHandle | null)[]>([]);
   const theme: CarouselTheme = CAROUSEL_THEMES[themeKey];
+
+  // ── History ───────────────────────────────────────────────────────────
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/carousels');
+      if (res.ok) setHistory(await res.json());
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  const saveCarousel = async () => {
+    if (!slides.length) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/carousels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: carouselTitle, topic, slides, theme_key: themeKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al guardar'); return; }
+      setSavedId(data.id);
+      toast.success('Carrusel guardado');
+      fetchHistory();
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadCarousel = async (id: string) => {
+    try {
+      const res = await fetch(`/api/carousels/${id}`);
+      const data = await res.json();
+      if (!res.ok) { toast.error('Error al cargar'); return; }
+      setSlides(data.slides ?? []);
+      setCarouselTitle(data.title ?? '');
+      setTopic(data.topic ?? '');
+      setThemeKey(data.theme_key ?? 'dark');
+      thumbRefs.current = new Array((data.slides ?? []).length).fill(null);
+      setActiveIdx(0);
+      setBgSlides(new Set());
+      setOpenSlides(new Set([0, (data.slides?.length ?? 1) - 1]));
+      setSavedId(data.id);
+      setMode('editor');
+      toast.success('Carrusel cargado');
+    } catch {
+      toast.error('Error de conexión');
+    }
+  };
+
+  const deleteCarousel = async (id: string) => {
+    try {
+      await fetch(`/api/carousels/${id}`, { method: 'DELETE' });
+      setHistory((prev) => prev.filter((c) => c.id !== id));
+      if (savedId === id) setSavedId(null);
+      toast.success('Carrusel eliminado');
+    } catch {
+      toast.error('Error al eliminar');
+    }
+  };
 
   // ── Compress bg photo ──────────────────────────────────────────────────
   const compressBg = (file: File): Promise<string> =>
@@ -128,7 +202,8 @@ export default function CarouselsPage() {
       setCarouselTitle(data.title ?? topic);
       setActiveIdx(0);
       setBgSlides(new Set());
-      setOpenSlides(new Set([0, generated.length - 1])); // portada + CTA open by default
+      setOpenSlides(new Set([0, generated.length - 1]));
+      setSavedId(null);
       setMode('editor');
       toast.success(`${generated.length} diapositivas generadas`);
     } catch {
@@ -181,11 +256,21 @@ export default function CarouselsPage() {
           </p>
         </div>
         {mode === 'editor' && (
-          <button onClick={() => setMode('form')}
-            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors shrink-0 mt-1">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Nuevo carrusel
-          </button>
+          <div className="flex items-center gap-2 shrink-0 mt-1">
+            <Button size="sm" onClick={saveCarousel} disabled={saving || !slides.length}
+              className={cn(
+                'gap-1.5 text-xs h-8',
+                savedId ? 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200' : 'bg-amber-500 hover:bg-amber-600 text-black font-semibold'
+              )}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {savedId ? 'Guardado' : 'Guardar'}
+            </Button>
+            <button onClick={() => setMode('form')}
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Nuevo
+            </button>
+          </div>
         )}
       </div>
 
@@ -537,6 +622,68 @@ export default function CarouselsPage() {
             </>
           )}
         </div>
+      </div>
+
+      {/* ── History ─────────────────────────────────────────────── */}
+      <div className="space-y-4 border-t border-zinc-800 pt-8">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-white">Mis carruseles guardados</h2>
+          {history.length > 0 && (
+            <span className="text-xs text-zinc-600">({history.length})</span>
+          )}
+        </div>
+
+        {loadingHistory ? (
+          <div className="flex items-center gap-2 text-zinc-600 py-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Cargando historial…</span>
+          </div>
+        ) : history.length === 0 ? (
+          <p className="text-sm text-zinc-600 py-4">
+            Aún no tienes carruseles guardados. Genera uno y pulsa <strong className="text-zinc-400">Guardar</strong>.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {history.map((c) => {
+              const t = CAROUSEL_THEMES[c.theme_key] ?? CAROUSEL_THEMES.dark;
+              const isActive = savedId === c.id;
+              return (
+                <div key={c.id}
+                  className={cn(
+                    'rounded-xl border overflow-hidden transition-colors',
+                    isActive ? 'border-amber-500/40 ring-1 ring-amber-500/10' : 'border-zinc-800 hover:border-zinc-700'
+                  )}>
+                  {/* Color strip */}
+                  <div className="h-2 w-full" style={{
+                    background: t.isGradient && t.bg2
+                      ? `linear-gradient(90deg, ${t.bg}, ${t.bg2})`
+                      : t.bg,
+                  }} />
+                  <div className="p-3 bg-zinc-900 space-y-2">
+                    <p className="text-sm font-medium text-white leading-snug line-clamp-2">{c.title}</p>
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                      <span>{c.slide_count} slides</span>
+                      <span>·</span>
+                      <span>{new Date(c.created_at).toLocaleDateString('es', { day: 'numeric', month: 'short' })}</span>
+                    </div>
+                    <div className="flex gap-1.5 pt-1">
+                      <button onClick={() => loadCarousel(c.id)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors">
+                        <FolderOpen className="w-3 h-3" />
+                        Abrir
+                      </button>
+                      <button onClick={() => deleteCarousel(c.id)}
+                        className="w-8 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-red-900/40 hover:text-red-400 text-zinc-500 transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

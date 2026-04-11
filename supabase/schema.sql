@@ -181,3 +181,25 @@ create policy "Users can delete their own presets"
 -- create policy "Users can read their own videos"
 --   on storage.objects for select
 --   using (bucket_id = 'videos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ─── Carousels ───────────────────────────────────────────────────────────────
+
+create table if not exists carousels (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid references auth.users(id) on delete cascade not null,
+  title       text not null,
+  topic       text not null default '',
+  slides      jsonb not null default '[]',
+  theme_key   text not null default 'dark',
+  slide_count int not null default 0,
+  created_at  timestamptz default now()
+);
+
+alter table carousels enable row level security;
+
+create policy "Users can manage their own carousels"
+  on carousels for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists carousels_user_id_idx on carousels(user_id);
