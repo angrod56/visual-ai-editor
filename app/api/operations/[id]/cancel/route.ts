@@ -13,12 +13,10 @@ export async function POST(
 
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
+  // Delete directly instead of marking as failed — prevents reappearing on reload
   const { error } = await supabase
     .from('edit_operations')
-    .update({
-      status: 'failed',
-      error_message: 'Cancelado por el usuario',
-    })
+    .delete()
     .eq('id', id)
     .eq('user_id', user.id)
     .in('status', ['pending', 'processing']);

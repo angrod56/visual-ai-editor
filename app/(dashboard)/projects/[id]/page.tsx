@@ -55,7 +55,10 @@ export default function ProjectEditorPage() {
         }
       }
 
-      if (opsRes.ok) setOperations(await opsRes.json());
+      if (opsRes.ok) {
+        const ops: EditOperation[] = await opsRes.json();
+        setOperations(ops.filter((op) => !deletedOpIds.current.has(op.id)));
+      }
       if (exportsRes.ok) setExports(await exportsRes.json());
     } finally {
       setLoading(false);
