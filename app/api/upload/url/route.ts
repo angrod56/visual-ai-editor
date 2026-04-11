@@ -60,14 +60,33 @@ async function downloadYouTube(url: string, tmpPath: string): Promise<{ title: s
     throw new Error('El video supera los 30 minutos. Elige un video más corto.');
   }
 
-  // Choose best format: video+audio, mp4 preferred
-  const format = info.chooseFormat({ type: 'video+audio', quality: 'bestefficiency' });
+  // Prefer lowest quality with video+audio to minimize download size / time
+  // This avoids hitting Vercel's function timeout on longer videos
+  const format =
+    info.chooseFormat({ type: 'video+audio', quality: 'lowestvideo' }) ??
+    info.chooseFormat({ type: 'video+audio', quality: 'bestefficiency' }) ??
+    info.chooseFormat({ type: 'video+audio' });
+
   if (!format) throw new Error('No se encontró un formato de video compatible');
 
   const streamUrl = format.decipher(yt.session.player);
 
-  // Download via fetch
-  const response = await fetch(streamUrl);
+  // Download via fetch with a 50-second abort signal (leave buffer for upload)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 50_000);
+
+  let response: Response;
+  try {
+    response = await fetch(streamUrl, { signal: controller.signal });
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') {
+      throw new Error('El video tardó demasiado en descargarse. Prueba con un video más corto o sube el archivo directamente.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
   if (!response.ok) throw new Error(`Error al descargar stream: ${response.status}`);
 
   const arrayBuffer = await response.arrayBuffer();

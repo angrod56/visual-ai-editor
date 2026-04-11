@@ -77,8 +77,13 @@ export function UrlUpload({ onSuccess }: Props) {
       onSuccess?.();
 
       setTimeout(() => router.push(`/projects/${projectId}`), 800);
-    } catch {
-      toast.error('Error de conexión');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('abort') || msg.includes('fetch') || msg === '') {
+        toast.error('El proceso tardó demasiado. Descarga el video de YouTube y súbelo directamente.', { duration: 6000 });
+      } else {
+        toast.error(msg || 'Error de conexión');
+      }
       setStage('idle');
     }
   };
