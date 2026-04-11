@@ -79,6 +79,10 @@ export async function POST(
 
     const thumbnail_url = await getSignedUrl(thumbKey);
     return NextResponse.json({ thumbnail_url });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error generando thumbnail';
+    console.error('[thumbnail]', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   } finally {
     await fs.unlink(tmpVideo).catch(() => {});
     await fs.unlink(tmpThumb).catch(() => {});

@@ -2,6 +2,10 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl as awsGetSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2, R2_BUCKET } from '@/lib/r2/client';
@@ -51,4 +55,82 @@ export async function downloadToBuffer(storagePath: string): Promise<Buffer> {
 
 export async function deleteFile(storagePath: string): Promise<void> {
   await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: storagePath }));
+}
+
+/**
+ * Stream a fetch Response body directly to R2 using multipart upload.
+ * Never buffers the full video on disk or in memory — parts are uploaded
+ * as they arrive, so total time ≈ max(download, upload) instead of sum.
+ * Minimum part size: 5 MB (AWS requirement, except last part).
+ */
+export async function uploadStream(
+  response: Response,
+  storagePath: string,
+  contentType = 'video/mp4'
+): Promise<number> {
+  const PART_SIZE = 5 * 1024 * 1024; // 5 MB minimum
+
+  const { UploadId } = await r2.send(
+    new CreateMultipartUploadCommand({
+      Bucket: R2_BUCKET,
+      Key: storagePath,
+      ContentType: contentType,
+    })
+  );
+
+  if (!UploadId) throw new Error('R2: no UploadId returned');
+
+  const parts: { PartNumber: number; ETag: string }[] = [];
+  let partNumber = 1;
+  let buffer = Buffer.alloc(0);
+  let totalBytes = 0;
+
+  try {
+    const reader = response.body!.getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (value) {
+        buffer = Buffer.concat([buffer, Buffer.from(value)]);
+        totalBytes += value.length;
+      }
+
+      // Upload a part when we have enough data, or on the final chunk
+      if (buffer.length >= PART_SIZE || (done && buffer.length > 0)) {
+        const { ETag } = await r2.send(
+          new UploadPartCommand({
+            Bucket: R2_BUCKET,
+            Key: storagePath,
+            UploadId,
+            PartNumber: partNumber,
+            Body: buffer,
+            ContentLength: buffer.length,
+          })
+        );
+        if (!ETag) throw new Error(`R2: no ETag for part ${partNumber}`);
+        parts.push({ PartNumber: partNumber, ETag });
+        partNumber++;
+        buffer = Buffer.alloc(0);
+      }
+
+      if (done) break;
+    }
+
+    await r2.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: R2_BUCKET,
+        Key: storagePath,
+        UploadId,
+        MultipartUpload: { Parts: parts },
+      })
+    );
+
+    return totalBytes;
+  } catch (err) {
+    await r2.send(
+      new AbortMultipartUploadCommand({ Bucket: R2_BUCKET, Key: storagePath, UploadId })
+    ).catch(() => {});
+    throw err;
+  }
 }
