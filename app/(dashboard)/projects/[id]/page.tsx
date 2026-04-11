@@ -87,6 +87,7 @@ export default function ProjectEditorPage() {
   const handleOperationDeleted = useCallback((opId: string) => {
     deletedOpIds.current.add(opId);
     setOperations((prev) => prev.filter((op) => op.id !== opId));
+    setActiveOperationIds((prev) => prev.filter((id) => id !== opId));
   }, []);
 
   const handleRetryTranscription = async () => {
