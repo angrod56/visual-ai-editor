@@ -54,7 +54,7 @@ export function InstructionInput({ projectId, projectReady, onOperationStarted }
 
       // Step 2: fire-and-forget the heavy processing
       // Server updates operation status via Supabase → Realtime pushes to ProcessingStatus
-      fetch(`/api/edit/${operation_id}/process`, { method: 'POST' }).catch(() => {});
+      fetch(`/api/edit/${operation_id}/process`, { method: 'POST', keepalive: true }).catch(() => {});
     } catch {
       toast.error('Error de conexión. Intenta de nuevo.');
     } finally {

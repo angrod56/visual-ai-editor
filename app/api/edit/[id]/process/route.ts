@@ -32,6 +32,24 @@ export async function POST(
 
   if (!operation) return NextResponse.json({ error: 'Operación no encontrada' }, { status: 404 });
 
+  // Idempotency: atomically claim the operation — only proceed if still pending
+  if (operation.status !== 'pending') {
+    return NextResponse.json({ status: operation.status });
+  }
+
+  const { data: claimed } = await supabase
+    .from('edit_operations')
+    .update({ status: 'processing' })
+    .eq('id', operationId)
+    .eq('status', 'pending')
+    .select('id')
+    .single();
+
+  if (!claimed) {
+    // Another invocation already claimed it
+    return NextResponse.json({ status: 'already_processing' });
+  }
+
   // Load project
   const { data: project } = await supabase
     .from('video_projects')
@@ -44,12 +62,6 @@ export async function POST(
 
   const typedProject = project as VideoProject;
   const startTime = Date.now();
-
-  // Mark as processing
-  await supabase
-    .from('edit_operations')
-    .update({ status: 'processing' })
-    .eq('id', operationId);
 
   const transcription = (typedProject.transcription as Transcription) ?? { segments: [] };
 

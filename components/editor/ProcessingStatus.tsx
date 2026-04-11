@@ -61,6 +61,23 @@ export function ProcessingStatus({ operationId, onCompleted }: Props) {
         if (data) setOperation(data as EditOperation);
       });
 
+    // Fallback trigger: if still pending after 3s, call the process endpoint directly.
+    // This handles cases where the browser's fire-and-forget fetch was dropped.
+    const fallbackTimer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('edit_operations')
+        .select('status')
+        .eq('id', operationId)
+        .single();
+
+      if (data?.status === 'pending') {
+        fetch(`/api/edit/${operationId}/process`, {
+          method: 'POST',
+          keepalive: true,
+        }).catch(() => {});
+      }
+    }, 3000);
+
     // Realtime subscription
     const channel = supabase
       .channel(`operation-${operationId}`)
@@ -83,6 +100,7 @@ export function ProcessingStatus({ operationId, onCompleted }: Props) {
       .subscribe();
 
     return () => {
+      clearTimeout(fallbackTimer);
       supabase.removeChannel(channel);
     };
   }, [operationId, onCompleted]);
