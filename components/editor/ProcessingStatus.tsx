@@ -121,7 +121,7 @@ export function ProcessingStatus({ operationId, onCompleted }: Props) {
           <p className={cn('font-medium text-sm', config.color)}>{config.label}</p>
 
           {plan?.description && (
-            <p className="text-xs text-slate-400 mt-1">Plan: {plan.description}</p>
+            <p className="text-xs text-zinc-400 mt-1">Plan: {plan.description}</p>
           )}
 
           {plan?.confidence != null && plan.confidence < 0.8 && (
@@ -141,7 +141,7 @@ export function ProcessingStatus({ operationId, onCompleted }: Props) {
           )}
 
           {operation.processing_time_ms != null && operation.status === 'completed' && (
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-zinc-500 mt-1">
               Procesado en {(operation.processing_time_ms / 1000).toFixed(1)}s
             </p>
           )}

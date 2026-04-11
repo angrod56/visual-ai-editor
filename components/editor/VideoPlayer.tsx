@@ -60,7 +60,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
 
   return (
     <div className="space-y-2">
-      {title && <p className="text-sm font-medium text-slate-300 truncate">{title}</p>}
+      {title && <p className="text-sm font-medium text-zinc-300 truncate">{title}</p>}
 
       <div
         className="relative bg-black rounded-xl overflow-hidden aspect-video cursor-pointer"
@@ -104,13 +104,13 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
       <div className="flex items-center gap-3">
         <button
           onClick={togglePlay}
-          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
         >
           {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
         </button>
 
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-xs text-slate-500 w-10 text-right tabular-nums">
+          <span className="text-xs text-zinc-500 w-10 text-right tabular-nums">
             {formatDuration(currentTime)}
           </span>
           <input
@@ -120,16 +120,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
             step={0.001}
             value={played}
             onChange={handleSeek}
-            className="flex-1 h-1.5 accent-purple-500 cursor-pointer"
+            className="flex-1 h-1.5 accent-amber-500 cursor-pointer"
           />
-          <span className="text-xs text-slate-500 w-10 tabular-nums">
+          <span className="text-xs text-zinc-500 w-10 tabular-nums">
             {formatDuration(duration)}
           </span>
         </div>
 
         <button
           onClick={toggleMute}
-          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors"
+          className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
         >
           {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>

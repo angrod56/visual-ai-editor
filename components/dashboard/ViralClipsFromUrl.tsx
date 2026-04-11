@@ -97,20 +97,20 @@ export function ViralClipsFromUrl() {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-pink-500/20 bg-gradient-to-br from-pink-950/30 via-slate-900 to-purple-950/30 p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 p-6">
       {/* Background glow */}
-      <div className="absolute -top-12 -right-12 w-48 h-48 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative space-y-4">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-pink-600/20 border border-pink-500/30 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-5 h-5 text-pink-400" />
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-5 h-5 text-amber-400" />
           </div>
           <div>
             <h2 className="font-bold text-white text-base">Clips virales desde YouTube</h2>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <p className="text-sm text-zinc-400 mt-0.5">
               Pega un link y la IA detecta los mejores momentos para TikTok, Reels y Shorts
             </p>
           </div>
@@ -123,12 +123,12 @@ export function ViralClipsFromUrl() {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://youtube.com/watch?v=..."
             disabled={isBusy}
-            className="flex-1 bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-500 focus:border-pink-500 h-10"
+            className="flex-1 bg-zinc-800/80 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500 h-10"
           />
           <Button
             type="submit"
             disabled={!isYouTube || isBusy}
-            className="bg-pink-600 hover:bg-pink-700 disabled:opacity-40 text-white font-semibold gap-2 h-10 shrink-0 px-5"
+            className="bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-semibold gap-2 h-10 shrink-0 px-5"
           >
             {isBusy ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -150,8 +150,8 @@ export function ViralClipsFromUrl() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
               subtitles
-                ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+                ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+                : 'bg-zinc-800/60 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
             )}
           >
             <Type className="w-3.5 h-3.5" />
@@ -164,8 +164,8 @@ export function ViralClipsFromUrl() {
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
               verticalCrop
-                ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+                ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+                : 'bg-zinc-800/60 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
             )}
           >
             <Smartphone className="w-3.5 h-3.5" />
@@ -175,8 +175,8 @@ export function ViralClipsFromUrl() {
 
         {/* Subtitle style picker */}
         {subtitles && !isBusy && (
-          <div className="flex flex-wrap gap-2 p-2.5 bg-slate-800/50 rounded-xl border border-slate-700/60">
-            <p className="w-full text-[10px] text-slate-500 uppercase tracking-wider">Estilo de subtítulos</p>
+          <div className="flex flex-wrap gap-2 p-2.5 bg-zinc-800/50 rounded-xl border border-zinc-700/60">
+            <p className="w-full text-[10px] text-zinc-500 uppercase tracking-wider">Estilo de subtítulos</p>
             {SUBTITLE_STYLES.map((style) => (
               <button
                 key={style.id}
@@ -185,12 +185,12 @@ export function ViralClipsFromUrl() {
                 className={cn(
                   'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[56px]',
                   subtitleStyle === style.id
-                    ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
-                    : `${style.preview.bg} ${style.preview.border} hover:border-slate-500`
+                    ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
+                    : `${style.preview.bg} ${style.preview.border} hover:border-zinc-500`
                 )}
               >
                 <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
-                <span className="text-[10px] text-slate-400">{style.label}</span>
+                <span className="text-[10px] text-zinc-400">{style.label}</span>
               </button>
             ))}
           </div>
@@ -205,14 +205,14 @@ export function ViralClipsFromUrl() {
               const isActive = s === stage;
               return (
                 <div key={s} className="flex items-center gap-1.5">
-                  {i > 0 && <div className={cn('w-4 h-px', isDone ? 'bg-pink-500' : 'bg-slate-700')} />}
+                  {i > 0 && <div className={cn('w-4 h-px', isDone ? 'bg-amber-500' : 'bg-zinc-700')} />}
                   <div className={cn(
                     'flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all',
                     isDone
-                      ? 'bg-pink-900/30 border-pink-700/50 text-pink-300'
+                      ? 'bg-amber-900/30 border-amber-600/50 text-amber-300'
                       : isActive
-                      ? 'bg-pink-600/20 border-pink-500 text-white'
-                      : 'bg-slate-800/60 border-slate-700 text-slate-600'
+                      ? 'bg-amber-500/20 border-amber-500 text-white'
+                      : 'bg-zinc-800/60 border-zinc-700 text-zinc-600'
                   )}>
                     {isDone
                       ? <CheckCircle2 className="w-3 h-3" />
@@ -230,10 +230,10 @@ export function ViralClipsFromUrl() {
 
         {/* Sub-label during processing */}
         {isBusy && STAGES[stage].sub && (
-          <p className="text-xs text-slate-500 animate-pulse">{STAGES[stage].sub}</p>
+          <p className="text-xs text-zinc-500 animate-pulse">{STAGES[stage].sub}</p>
         )}
 
-        <p className="text-xs text-slate-600">
+        <p className="text-xs text-zinc-600">
           YouTube · Máximo 30 min · El video se guarda en tu biblioteca
         </p>
       </div>

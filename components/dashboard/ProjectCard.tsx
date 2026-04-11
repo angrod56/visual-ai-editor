@@ -68,10 +68,10 @@ export function ProjectCard({ project, onDeleted }: Props) {
   const showThumbnail = thumbnailUrl && !imgError;
 
   return (
-    <div className="group relative bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-600 transition-all duration-200">
+    <div className="group relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 transition-all duration-200">
       {/* Thumbnail */}
       <Link href={`/projects/${project.id}`} className="block">
-        <div className="aspect-video bg-slate-800 flex items-center justify-center overflow-hidden relative">
+        <div className="aspect-video bg-zinc-800 flex items-center justify-center overflow-hidden relative">
           {showThumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -81,9 +81,9 @@ export function ProjectCard({ project, onDeleted }: Props) {
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="flex flex-col items-center gap-2 text-slate-600">
+            <div className="flex flex-col items-center gap-2 text-zinc-600">
               {thumbLoading ? (
-                <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
               ) : (
                 <Film className="w-12 h-12" />
               )}
@@ -102,7 +102,7 @@ export function ProjectCard({ project, onDeleted }: Props) {
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <Link href={`/projects/${project.id}`}>
-            <h3 className="font-semibold text-white text-sm leading-tight hover:text-purple-300 transition-colors line-clamp-2">
+            <h3 className="font-semibold text-white text-sm leading-tight hover:text-amber-300 transition-colors line-clamp-2">
               {project.title}
             </h3>
           </Link>
@@ -116,7 +116,7 @@ export function ProjectCard({ project, onDeleted }: Props) {
           </Badge>
         </div>
 
-        <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-3 text-xs text-zinc-500">
           {project.duration_seconds != null && (
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
@@ -139,7 +139,7 @@ export function ProjectCard({ project, onDeleted }: Props) {
             asChild
             size="sm"
             disabled={project.status !== 'ready'}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs"
+            className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-xs"
           >
             <Link href={`/projects/${project.id}`}>
               {project.status === 'ready' ? 'Editar con IA' : 'Procesando...'}
@@ -150,7 +150,7 @@ export function ProjectCard({ project, onDeleted }: Props) {
             size="sm"
             onClick={handleDelete}
             disabled={deleting}
-            className="text-slate-500 hover:text-red-400 hover:bg-red-900/20 px-2"
+            className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20 px-2"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

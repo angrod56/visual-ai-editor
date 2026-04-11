@@ -108,7 +108,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
 
   if (operations.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-500 text-sm">
+      <div className="text-center py-8 text-zinc-500 text-sm">
         <p>No hay ediciones aún.</p>
         <p className="text-xs mt-1">Escribe una instrucción para comenzar.</p>
       </div>
@@ -127,10 +127,10 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
           return (
             <div
               key={op.id}
-              className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden"
+              className="bg-zinc-800 rounded-lg border border-zinc-700 overflow-hidden"
             >
               <div
-                className="w-full p-3 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                className="w-full p-3 hover:bg-zinc-700/50 transition-colors cursor-pointer"
                 onClick={() => setExpanded(isExpanded ? null : op.id)}
               >
                 {/* Row 1: icon + instruction + chevron */}
@@ -141,14 +141,14 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                       op.status === 'completed' ? 'text-green-400' :
                       op.status === 'failed' ? 'text-red-400' :
                       op.status === 'processing' ? 'text-blue-400 animate-spin' :
-                      'text-slate-400'
+                      'text-zinc-400'
                     )}
                   />
-                  <p className="flex-1 text-sm text-slate-300 truncate">{op.instruction}</p>
+                  <p className="flex-1 text-sm text-zinc-300 truncate">{op.instruction}</p>
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-zinc-500 shrink-0" />
                   )}
                 </div>
 
@@ -162,7 +162,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                     <button
                       onClick={(e) => handleCancel(e, op.id)}
                       disabled={cancelling === op.id}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-orange-400 hover:bg-orange-900/20 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-orange-400 hover:bg-orange-900/20 rounded transition-colors"
                       title="Detener"
                     >
                       <StopCircle className={cn('w-3.5 h-3.5', cancelling === op.id && 'animate-spin')} />
@@ -173,7 +173,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                     <button
                       onClick={(e) => handleDelete(e, op.id)}
                       disabled={deleting === op.id}
-                      className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
+                      className="flex items-center gap-1 px-2 py-1 text-xs text-zinc-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -184,7 +184,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
               </div>
 
               {isExpanded && (
-                <div className="px-3 pb-3 space-y-2 border-t border-slate-700 pt-2">
+                <div className="px-3 pb-3 space-y-2 border-t border-zinc-700 pt-2">
                   {/* Clarification reply UI */}
                   {op.status === 'needs_clarification' && (
                     <div className="space-y-2 p-2.5 bg-orange-900/10 border border-orange-800/40 rounded-lg">
@@ -200,7 +200,7 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                           onChange={(e) => setClarifications((p) => ({ ...p, [op.id]: e.target.value }))}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleReply(op); }}
                           placeholder="Tu respuesta..."
-                          className="flex-1 text-xs bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500"
+                          className="flex-1 text-xs bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-1.5 text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
                         />
                         <button
                           onClick={() => handleReply(op)}
@@ -217,23 +217,23 @@ export function OperationHistory({ operations, onDeleted, onOperationStarted }: 
                   )}
 
                   {plan?.description && (
-                    <p className="text-xs text-slate-400">
-                      <span className="text-slate-500">Plan:</span> {plan.description}
+                    <p className="text-xs text-zinc-400">
+                      <span className="text-zinc-500">Plan:</span> {plan.description}
                     </p>
                   )}
                   {op.error_message && (
                     <p className="text-xs text-red-400">{op.error_message}</p>
                   )}
                   {op.processing_time_ms != null && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-zinc-500">
                       Tiempo: {(op.processing_time_ms / 1000).toFixed(1)}s
                     </p>
                   )}
                   {plan?.ffmpeg_operations?.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-xs text-slate-500">Operaciones FFmpeg:</p>
+                      <p className="text-xs text-zinc-500">Operaciones FFmpeg:</p>
                       {plan.ffmpeg_operations.map((ffop) => (
-                        <p key={ffop.step} className="text-xs text-slate-500 font-mono pl-2">
+                        <p key={ffop.step} className="text-xs text-zinc-500 font-mono pl-2">
                           {ffop.step}. {ffop.command_type}: {ffop.description}
                         </p>
                       ))}

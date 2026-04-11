@@ -87,13 +87,13 @@ export function UrlUpload({ onSuccess }: Props) {
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="relative">
-          <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://youtube.com/watch?v=..."
             disabled={isBusy}
-            className="pl-9 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500"
+            className="pl-9 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500"
           />
         </div>
 
@@ -105,7 +105,7 @@ export function UrlUpload({ onSuccess }: Props) {
               ? 'bg-red-900/20 border-red-800 text-red-400'
               : (isInstagram || isTikTok)
               ? 'bg-orange-900/20 border-orange-800 text-orange-400'
-              : 'bg-slate-800 border-slate-700 text-slate-500'
+              : 'bg-zinc-800 border-zinc-700 text-zinc-500'
           )}>
             {isYouTube && <><Play className="w-3.5 h-3.5" /> YouTube detectado — compatible</>}
             {isInstagram && <>⚠️ Instagram: descarga el video manualmente y súbelo</>}
@@ -117,7 +117,7 @@ export function UrlUpload({ onSuccess }: Props) {
         <Button
           type="submit"
           disabled={!isSupported || isBusy}
-          className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-semibold gap-2"
+          className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-semibold gap-2"
         >
           {stage === 'idle' && <><Link className="w-4 h-4" />Importar video</>}
           {stage === 'downloading' && <><Loader2 className="w-4 h-4 animate-spin" />Descargando...</>}
@@ -128,12 +128,12 @@ export function UrlUpload({ onSuccess }: Props) {
 
       {/* Progress label */}
       {isBusy && (
-        <p className="text-xs text-slate-500 text-center animate-pulse">
+        <p className="text-xs text-zinc-500 text-center animate-pulse">
           {STAGE_LABELS[stage]} Esto puede tardar 1–3 minutos según la duración.
         </p>
       )}
 
-      <p className="text-xs text-slate-600 text-center">
+      <p className="text-xs text-zinc-600 text-center">
         Soportado: YouTube · Límite: 30 min por video
       </p>
     </div>

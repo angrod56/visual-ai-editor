@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={inter.variable}>
-      <body className="antialiased font-sans bg-slate-950 text-white">
+      <body className="antialiased font-sans bg-zinc-950 text-white">
         {children}
         <Toaster richColors position="top-right" />
       </body>

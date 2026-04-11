@@ -27,7 +27,7 @@ export function TranscriptionPanel({ segments, onSeek, currentTime = 0 }: Props)
 
   if (segments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-32 text-slate-500 text-sm gap-2">
+      <div className="flex flex-col items-center justify-center h-32 text-zinc-500 text-sm gap-2">
         <p>Sin transcripción disponible</p>
       </div>
     );
@@ -36,12 +36,12 @@ export function TranscriptionPanel({ segments, onSeek, currentTime = 0 }: Props)
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
         <Input
           placeholder="Buscar en transcripción..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 h-8 text-xs bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+          className="pl-8 h-8 text-xs bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
         />
       </div>
 
@@ -58,15 +58,15 @@ export function TranscriptionPanel({ segments, onSeek, currentTime = 0 }: Props)
                 className={cn(
                   'w-full text-left px-3 py-2 rounded-lg transition-colors group',
                   isActive
-                    ? 'bg-purple-600/20 border border-purple-500/40'
-                    : 'hover:bg-slate-800'
+                    ? 'bg-amber-500/20 border border-amber-500/40'
+                    : 'hover:bg-zinc-800'
                 )}
               >
                 <div className="flex items-start gap-2">
                   <span
                     className={cn(
                       'text-xs tabular-nums mt-0.5 shrink-0 font-mono',
-                      isActive ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-400'
+                      isActive ? 'text-amber-400' : 'text-zinc-500 group-hover:text-zinc-400'
                     )}
                   >
                     {secondsToTimecode(seg.start)}
@@ -74,7 +74,7 @@ export function TranscriptionPanel({ segments, onSeek, currentTime = 0 }: Props)
                   <p
                     className={cn(
                       'text-xs leading-relaxed',
-                      isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'
+                      isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'
                     )}
                   >
                     {search.trim()
@@ -95,7 +95,7 @@ function highlightText(text: string, query: string): React.ReactNode {
   const parts = text.split(new RegExp(`(${escapeRegex(query)})`, 'gi'));
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase() ? (
-      <mark key={i} className="bg-purple-500/40 text-white rounded px-0.5">
+      <mark key={i} className="bg-amber-500/40 text-white rounded px-0.5">
         {part}
       </mark>
     ) : (

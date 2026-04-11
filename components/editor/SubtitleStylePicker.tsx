@@ -11,7 +11,7 @@ interface Props {
 export function SubtitleStylePicker({ selected, onChange }: Props) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
         Estilo de subtítulos
       </p>
       <div className="flex flex-wrap gap-2">
@@ -23,8 +23,8 @@ export function SubtitleStylePicker({ selected, onChange }: Props) {
               'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all duration-150',
               'min-w-[72px] text-center',
               selected === style.id
-                ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
-                : `${style.preview.bg} ${style.preview.border} border hover:border-slate-500`
+                ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
+                : `${style.preview.bg} ${style.preview.border} border hover:border-zinc-500`
             )}
             title={style.label}
           >
@@ -36,7 +36,7 @@ export function SubtitleStylePicker({ selected, onChange }: Props) {
             >
               Aa
             </span>
-            <span className="text-[10px] text-slate-400 leading-none">{style.label}</span>
+            <span className="text-[10px] text-zinc-400 leading-none">{style.label}</span>
           </button>
         ))}
       </div>

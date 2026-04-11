@@ -145,7 +145,7 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* ── Presets ─────────────────────────────────────────────── */}
       <div>
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Presets rápidos</p>
+        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Presets rápidos</p>
         <div className="flex flex-wrap gap-2">
           <PresetBtn
             icon="📱"
@@ -176,7 +176,7 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* ── Operation cards ─────────────────────────────────────── */}
       <div>
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Transformaciones</p>
+        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Transformaciones</p>
         <div className="grid grid-cols-2 gap-2">
 
           <OpCard icon={<Scissors className="w-5 h-5" />} label="Recortar" desc="Elige inicio y fin" active={ops.trim} disabled={!projectReady || ops.extractAudio} onClick={() => toggle('trim')} />
@@ -193,26 +193,26 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* Trim time inputs */}
       {ops.trim && (
-        <div className="space-y-2 p-3 bg-slate-800/60 rounded-xl border border-slate-700">
-          <p className="text-xs font-medium text-slate-400">Tiempo de recorte (MM:SS)</p>
+        <div className="space-y-2 p-3 bg-zinc-800/60 rounded-xl border border-zinc-700">
+          <p className="text-xs font-medium text-zinc-400">Tiempo de recorte (MM:SS)</p>
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="text-[10px] text-slate-500 mb-1 block">Inicio</label>
+              <label className="text-[10px] text-zinc-500 mb-1 block">Inicio</label>
               <Input
                 value={ops.trimStart}
                 onChange={(e) => set({ trimStart: e.target.value })}
                 placeholder="0:00"
-                className="h-8 text-sm bg-slate-800 border-slate-600 text-white"
+                className="h-8 text-sm bg-zinc-800 border-zinc-600 text-white"
               />
             </div>
-            <span className="text-slate-600 mt-4">→</span>
+            <span className="text-zinc-600 mt-4">→</span>
             <div className="flex-1">
-              <label className="text-[10px] text-slate-500 mb-1 block">Fin</label>
+              <label className="text-[10px] text-zinc-500 mb-1 block">Fin</label>
               <Input
                 value={ops.trimEnd}
                 onChange={(e) => set({ trimEnd: e.target.value })}
                 placeholder="1:30"
-                className="h-8 text-sm bg-slate-800 border-slate-600 text-white"
+                className="h-8 text-sm bg-zinc-800 border-zinc-600 text-white"
               />
             </div>
           </div>
@@ -221,8 +221,8 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* Speed selector */}
       {ops.speed && (
-        <div className="space-y-2 p-3 bg-slate-800/60 rounded-xl border border-slate-700">
-          <p className="text-xs font-medium text-slate-400">Velocidad de reproducción</p>
+        <div className="space-y-2 p-3 bg-zinc-800/60 rounded-xl border border-zinc-700">
+          <p className="text-xs font-medium text-zinc-400">Velocidad de reproducción</p>
           <div className="flex gap-2 flex-wrap">
             {SPEED_OPTIONS.map((opt) => (
               <button
@@ -231,8 +231,8 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
                 className={cn(
                   'px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
                   ops.speedFactor === opt.value
-                    ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+                    ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+                    : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
                 )}
               >
                 {opt.label}
@@ -244,8 +244,8 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* Subtitle style */}
       {ops.subtitles && (
-        <div className="space-y-2 p-3 bg-slate-800/60 rounded-xl border border-slate-700">
-          <p className="text-xs font-medium text-slate-400">Estilo de subtítulos</p>
+        <div className="space-y-2 p-3 bg-zinc-800/60 rounded-xl border border-zinc-700">
+          <p className="text-xs font-medium text-zinc-400">Estilo de subtítulos</p>
           <div className="flex flex-wrap gap-2">
             {SUBTITLE_STYLES.map((style) => (
               <button
@@ -254,12 +254,12 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
                 className={cn(
                   'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[60px]',
                   ops.subtitleStyle === style.id
-                    ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
-                    : `${style.preview.bg} ${style.preview.border} hover:border-slate-500`
+                    ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
+                    : `${style.preview.bg} ${style.preview.border} hover:border-zinc-500`
                 )}
               >
                 <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
-                <span className="text-[10px] text-slate-400">{style.label}</span>
+                <span className="text-[10px] text-zinc-400">{style.label}</span>
               </button>
             ))}
           </div>
@@ -270,7 +270,7 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
       {activeTags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {activeTags.map((t) => (
-            <span key={t} className="px-2 py-0.5 rounded-full text-xs bg-purple-600/20 text-purple-300 border border-purple-500/40">
+            <span key={t} className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-300 border border-amber-500/40">
               {t}
             </span>
           ))}
@@ -279,9 +279,9 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
 
       {/* Divider */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-px bg-slate-800" />
-        <span className="text-xs text-slate-600">o instrucción personalizada</span>
-        <div className="flex-1 h-px bg-slate-800" />
+        <div className="flex-1 h-px bg-zinc-800" />
+        <span className="text-xs text-zinc-600">o instrucción personalizada</span>
+        <div className="flex-1 h-px bg-zinc-800" />
       </div>
 
       {/* Custom instruction */}
@@ -291,7 +291,7 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
         placeholder={projectReady ? 'Ej: "Genera un resumen de los mejores momentos"' : 'Esperando que el video termine de procesarse...'}
         disabled={!projectReady || isProcessing}
         rows={2}
-        className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 resize-none text-sm"
+        className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500 resize-none text-sm"
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit(); }}
       />
 
@@ -299,7 +299,7 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
       <Button
         onClick={handleSubmit}
         disabled={!canSubmit}
-        className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-semibold gap-2"
+        className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-semibold gap-2"
       >
         {isProcessing ? (
           <><Loader2 className="w-4 h-4 animate-spin" />Procesando...</>
@@ -308,8 +308,8 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
         )}
       </Button>
 
-      <p className="text-xs text-slate-600 text-center">
-        <kbd className="bg-slate-800 border border-slate-700 rounded px-1">⌘ Enter</kbd> para exportar
+      <p className="text-xs text-zinc-600 text-center">
+        <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1">⌘ Enter</kbd> para exportar
       </p>
     </div>
   );
@@ -335,14 +335,14 @@ function OpCard({
         'flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-150',
         'disabled:opacity-40 disabled:cursor-not-allowed',
         active
-          ? 'bg-purple-600/20 border-purple-500 ring-1 ring-purple-500'
-          : 'bg-slate-800 border-slate-700 hover:border-slate-500'
+          ? 'bg-amber-500/20 border-amber-500 ring-1 ring-amber-500'
+          : 'bg-zinc-800 border-zinc-700 hover:border-zinc-500'
       )}
     >
-      <span className={cn('shrink-0', active ? 'text-purple-400' : 'text-slate-400')}>{icon}</span>
+      <span className={cn('shrink-0', active ? 'text-amber-400' : 'text-zinc-400')}>{icon}</span>
       <div className="min-w-0">
-        <p className={cn('text-sm font-medium leading-tight', active ? 'text-white' : 'text-slate-300')}>{label}</p>
-        <p className="text-xs text-slate-500 truncate mt-0.5">{desc}</p>
+        <p className={cn('text-sm font-medium leading-tight', active ? 'text-white' : 'text-zinc-300')}>{label}</p>
+        <p className="text-xs text-zinc-500 truncate mt-0.5">{desc}</p>
       </div>
     </button>
   );
@@ -362,8 +362,8 @@ function PresetBtn({
       className={cn(
         'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
         active
-          ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-          : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+          ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+          : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
       )}
     >
       <span>{icon}</span>

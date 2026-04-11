@@ -40,7 +40,7 @@ function ScoreBar({ score }: { score: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all', color)}
           style={{ width: `${score}%` }}
@@ -105,10 +105,10 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
       {/* Header */}
       <div>
         <p className="text-sm font-semibold text-white flex items-center gap-1.5">
-          <TrendingUp className="w-4 h-4 text-pink-400" />
+          <TrendingUp className="w-4 h-4 text-amber-400" />
           Clips virales con IA
         </p>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs text-zinc-500 mt-0.5">
           Detecta los mejores momentos para TikTok, Reels y Shorts
         </p>
       </div>
@@ -122,8 +122,8 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
             subtitles
-              ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+              ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+              : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
           )}
         >
           <Type className="w-3.5 h-3.5" />
@@ -137,8 +137,8 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all',
             verticalCrop
-              ? 'bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+              ? 'bg-amber-500/20 border-amber-500 text-white ring-1 ring-amber-500'
+              : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'
           )}
         >
           <Smartphone className="w-3.5 h-3.5" />
@@ -148,8 +148,8 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
 
       {/* Subtitle style picker — only visible when subtitles is on */}
       {subtitles && (
-        <div className="flex flex-wrap gap-2 p-2.5 bg-slate-800/60 rounded-xl border border-slate-700">
-          <p className="w-full text-[10px] text-slate-500 uppercase tracking-wider">Estilo de subtítulos</p>
+        <div className="flex flex-wrap gap-2 p-2.5 bg-zinc-800/60 rounded-xl border border-zinc-700">
+          <p className="w-full text-[10px] text-zinc-500 uppercase tracking-wider">Estilo de subtítulos</p>
           {SUBTITLE_STYLES.map((style) => (
             <button
               key={style.id}
@@ -157,12 +157,12 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
               className={cn(
                 'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[56px]',
                 subtitleStyle === style.id
-                  ? 'border-purple-500 bg-purple-600/20 ring-1 ring-purple-500'
-                  : `${style.preview.bg} ${style.preview.border} hover:border-slate-500`
+                  ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
+                  : `${style.preview.bg} ${style.preview.border} hover:border-zinc-500`
               )}
             >
               <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
-              <span className="text-[10px] text-slate-400">{style.label}</span>
+              <span className="text-[10px] text-zinc-400">{style.label}</span>
             </button>
           ))}
         </div>
@@ -172,7 +172,7 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
       <Button
         onClick={handleGenerate}
         disabled={!projectReady || loading}
-        className="w-full bg-pink-600 hover:bg-pink-700 disabled:opacity-40 text-white gap-1.5"
+        className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white gap-1.5"
       >
         {loading ? (
           <><Loader2 className="w-4 h-4 animate-spin" />Analizando...</>
@@ -183,27 +183,27 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
 
       {/* Loading state */}
       {loading && (
-        <div className="p-4 rounded-xl border border-slate-700 bg-slate-800/60 text-center space-y-2">
-          <Loader2 className="w-6 h-6 animate-spin text-pink-400 mx-auto" />
-          <p className="text-xs text-slate-400">Claude está analizando el contenido...</p>
-          <p className="text-xs text-slate-600">Busca hooks, momentos virales y narrativas completas</p>
+        <div className="p-4 rounded-xl border border-zinc-700 bg-zinc-800/60 text-center space-y-2">
+          <Loader2 className="w-6 h-6 animate-spin text-amber-400 mx-auto" />
+          <p className="text-xs text-zinc-400">Claude está analizando el contenido...</p>
+          <p className="text-xs text-zinc-600">Busca hooks, momentos virales y narrativas completas</p>
         </div>
       )}
 
       {/* Results */}
       {!loading && clips.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-500">{clips.length} clips encontrados — procesando en segundo plano</p>
+          <p className="text-xs text-zinc-500">{clips.length} clips encontrados — procesando en segundo plano</p>
           {clips.map((clip, i) => (
             <div
               key={i}
-              className="p-3 rounded-xl border border-slate-700 bg-slate-800/60 space-y-2"
+              className="p-3 rounded-xl border border-zinc-700 bg-zinc-800/60 space-y-2"
             >
               {/* Title + type badge */}
               <div className="flex items-start gap-2">
-                <span className="text-xs font-bold text-pink-400 shrink-0 mt-0.5">#{i + 1}</span>
+                <span className="text-xs font-bold text-amber-400 shrink-0 mt-0.5">#{i + 1}</span>
                 <p className="text-sm font-medium text-white leading-tight flex-1">{clip.title}</p>
-                <span className="flex items-center gap-1 text-[10px] text-slate-400 bg-slate-700 rounded-full px-2 py-0.5 shrink-0">
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400 bg-zinc-700 rounded-full px-2 py-0.5 shrink-0">
                   {CONTENT_ICONS[clip.content_type]}
                   {CONTENT_LABELS[clip.content_type]}
                 </span>
@@ -213,12 +213,12 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
               <ScoreBar score={clip.viral_score} />
 
               {/* Hook */}
-              <p className="text-xs text-slate-400 italic">&ldquo;{clip.hook}&rdquo;</p>
+              <p className="text-xs text-zinc-400 italic">&ldquo;{clip.hook}&rdquo;</p>
 
               {/* Reason + time range */}
               <div className="flex items-end justify-between gap-2">
-                <p className="text-xs text-slate-500 leading-snug">{clip.reason}</p>
-                <span className="text-xs text-slate-600 shrink-0 font-mono">
+                <p className="text-xs text-zinc-500 leading-snug">{clip.reason}</p>
+                <span className="text-xs text-zinc-600 shrink-0 font-mono">
                   {fmtTime(clip.start)} → {fmtTime(clip.end)}
                 </span>
               </div>
@@ -229,7 +229,7 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
 
       {/* Empty state after run with no results */}
       {!loading && done && clips.length === 0 && (
-        <p className="text-xs text-slate-500 text-center py-3">
+        <p className="text-xs text-zinc-500 text-center py-3">
           No se encontraron segmentos virales. Intenta con un video de mayor duración.
         </p>
       )}

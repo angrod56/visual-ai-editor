@@ -52,12 +52,12 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-4">
-        <Card className="w-full max-w-md bg-slate-900/80 border-slate-700 text-white backdrop-blur-sm text-center">
+      <div className="min-h-screen flex items-center justify-center bg-black p-4">
+        <Card className="w-full max-w-md bg-zinc-900/80 border-zinc-700 text-white backdrop-blur-sm text-center">
           <CardContent className="pt-8 pb-8">
             <div className="text-5xl mb-4">✅</div>
             <h2 className="text-xl font-bold text-white mb-2">¡Cuenta creada!</h2>
-            <p className="text-slate-400 text-sm">
+            <p className="text-zinc-400 text-sm">
               Revisa tu correo para confirmar tu cuenta. Serás redirigido al login en unos segundos.
             </p>
           </CardContent>
@@ -67,21 +67,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 p-4">
-      <Card className="w-full max-w-md bg-slate-900/80 border-slate-700 text-white backdrop-blur-sm">
+    <div className="min-h-screen flex items-center justify-center bg-black p-4">
+      <Card className="w-full max-w-md bg-zinc-900/80 border-zinc-700 text-white backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
             <span className="text-4xl">🎬</span>
           </div>
           <CardTitle className="text-2xl font-bold text-white">Crear cuenta</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-zinc-400">
             Empieza a editar videos con inteligencia artificial
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300" htmlFor="email">
+              <label className="text-sm font-medium text-zinc-300" htmlFor="email">
                 Correo electrónico
               </label>
               <Input
@@ -91,11 +91,11 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500"
+                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-500 focus:border-amber-500"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300" htmlFor="password">
+              <label className="text-sm font-medium text-zinc-300" htmlFor="password">
                 Contraseña
               </label>
               <Input
@@ -105,11 +105,11 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500"
+                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-500 focus:border-amber-500"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300" htmlFor="confirm-password">
+              <label className="text-sm font-medium text-zinc-300" htmlFor="confirm-password">
                 Confirmar contraseña
               </label>
               <Input
@@ -119,7 +119,7 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500"
+                className="bg-zinc-800 border-zinc-600 text-white placeholder:text-zinc-500 focus:border-amber-500"
               />
             </div>
             {error && (
@@ -130,14 +130,14 @@ export default function RegisterPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold"
             >
               {loading ? 'Creando cuenta...' : 'Crear cuenta gratis'}
             </Button>
           </form>
-          <p className="text-center text-sm text-slate-400 mt-4">
+          <p className="text-center text-sm text-zinc-400 mt-4">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-purple-400 hover:text-purple-300 font-medium">
+            <Link href="/login" className="text-amber-400 hover:text-amber-300 font-medium">
               Iniciar sesión
             </Link>
           </p>

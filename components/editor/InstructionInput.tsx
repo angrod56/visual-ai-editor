@@ -76,7 +76,7 @@ export function InstructionInput({ projectId, projectReady, subtitleStyle, onOpe
           }
           disabled={!projectReady || isProcessing}
           rows={3}
-          className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 resize-none pr-36 text-sm"
+          className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-amber-500 resize-none pr-36 text-sm"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
           }}
@@ -84,7 +84,7 @@ export function InstructionInput({ projectId, projectReady, subtitleStyle, onOpe
         <Button
           onClick={handleSubmit}
           disabled={isProcessing || !instruction.trim() || !projectReady}
-          className="absolute bottom-3 right-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs px-3 py-1.5 h-auto"
+          className="absolute bottom-3 right-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs px-3 py-1.5 h-auto"
         >
           {isProcessing ? (
             <>
@@ -100,8 +100,8 @@ export function InstructionInput({ projectId, projectReady, subtitleStyle, onOpe
         </Button>
       </div>
 
-      <div className="text-xs text-slate-600">
-        Tip: <kbd className="bg-slate-800 border border-slate-700 rounded px-1 py-0.5">⌘ Enter</kbd> para enviar
+      <div className="text-xs text-zinc-600">
+        Tip: <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5">⌘ Enter</kbd> para enviar
       </div>
 
       {/* Suggestion chips */}
@@ -111,7 +111,7 @@ export function InstructionInput({ projectId, projectReady, subtitleStyle, onOpe
             key={chip}
             onClick={() => setInstruction(chip)}
             disabled={!projectReady}
-            className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full transition-colors text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-full transition-colors text-zinc-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {chip}
           </button>

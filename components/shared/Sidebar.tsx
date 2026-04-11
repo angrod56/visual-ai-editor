@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Film, Settings } from 'lucide-react';
+import { Film, Settings, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -14,15 +14,17 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 min-h-screen bg-slate-900 border-r border-slate-800 flex flex-col">
+    <aside className="w-60 min-h-screen bg-black border-r border-zinc-800/60 flex flex-col">
       {/* Logo */}
-      <div className="p-5 border-b border-slate-800">
-        <Link href="/projects" className="flex items-center gap-2">
-          <span className="text-2xl">🎬</span>
-          <span className="font-bold text-white text-lg leading-tight">
-            VisualAI<br />
-            <span className="text-purple-400 text-sm font-normal">Editor</span>
-          </span>
+      <div className="p-5 border-b border-zinc-800/60">
+        <Link href="/projects" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="leading-tight">
+            <span className="font-bold text-white text-sm block tracking-wide">VISUAL AI</span>
+            <span className="text-amber-400/80 text-[10px] font-medium tracking-widest uppercase">Editor</span>
+          </div>
         </Link>
       </div>
 
@@ -35,8 +37,8 @@ export function Sidebar() {
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               pathname === href || pathname.startsWith(href + '/')
-                ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                : 'text-zinc-500 hover:text-white hover:bg-zinc-900'
             )}
           >
             <Icon className="w-4 h-4" />
@@ -46,8 +48,8 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-800">
-        <p className="text-xs text-slate-600 text-center">VisualAI Editor v1.0</p>
+      <div className="p-4 border-t border-zinc-800/60">
+        <p className="text-xs text-zinc-700 text-center tracking-widest uppercase">v1.0</p>
       </div>
     </aside>
   );

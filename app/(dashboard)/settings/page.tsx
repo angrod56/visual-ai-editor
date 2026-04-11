@@ -29,26 +29,26 @@ export default function SettingsPage() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-white">Configuración</h1>
 
-      <Card className="bg-slate-900 border-slate-800 text-white">
+      <Card className="bg-zinc-900 border-zinc-800 text-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <User className="w-5 h-5 text-purple-400" />
+            <User className="w-5 h-5 text-amber-400" />
             Perfil
           </CardTitle>
-          <CardDescription className="text-slate-400">Tu información de cuenta</CardDescription>
+          <CardDescription className="text-zinc-400">Tu información de cuenta</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm text-slate-400">Correo electrónico</p>
+            <p className="text-sm text-zinc-400">Correo electrónico</p>
             <p className="font-medium text-white mt-1">{user?.email ?? '—'}</p>
           </div>
           <div>
-            <p className="text-sm text-slate-400">ID de usuario</p>
-            <p className="text-xs font-mono text-slate-500 mt-1">{user?.id ?? '—'}</p>
+            <p className="text-sm text-zinc-400">ID de usuario</p>
+            <p className="text-xs font-mono text-zinc-500 mt-1">{user?.id ?? '—'}</p>
           </div>
           <div>
-            <p className="text-sm text-slate-400">Cuenta creada</p>
-            <p className="text-sm text-slate-300 mt-1">
+            <p className="text-sm text-zinc-400">Cuenta creada</p>
+            <p className="text-sm text-zinc-300 mt-1">
               {user?.created_at
                 ? new Date(user.created_at).toLocaleDateString('es', {
                     day: 'numeric',
@@ -61,10 +61,10 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-900 border-slate-800 text-white">
+      <Card className="bg-zinc-900 border-zinc-800 text-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-white">
-            <Shield className="w-5 h-5 text-purple-400" />
+            <Shield className="w-5 h-5 text-amber-400" />
             Seguridad
           </CardTitle>
         </CardHeader>

@@ -16,13 +16,13 @@ const QUICK_ACTIONS = [
 export function QuickActions({ onSelect }: Props) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Acciones rápidas</p>
+      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Acciones rápidas</p>
       <div className="flex flex-wrap gap-2">
         {QUICK_ACTIONS.map((action) => (
           <button
             key={action.label}
             onClick={() => onSelect(action.instruction)}
-            className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 rounded-full transition-all duration-150 text-slate-300 hover:text-white"
+            className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 rounded-full transition-all duration-150 text-zinc-300 hover:text-white"
           >
             {action.label}
           </button>

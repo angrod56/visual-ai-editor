@@ -20,11 +20,11 @@ export function Header({ userEmail }: HeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm flex items-center justify-between px-6">
+    <header className="h-14 border-b border-zinc-800/60 bg-black/80 backdrop-blur-sm flex items-center justify-between px-6">
       <div />
       <div className="flex items-center gap-3">
         {userEmail && (
-          <div className="flex items-center gap-2 text-sm text-slate-400">
+          <div className="flex items-center gap-2 text-sm text-zinc-400">
             <User className="w-4 h-4" />
             <span>{userEmail}</span>
           </div>
@@ -33,7 +33,7 @@ export function Header({ userEmail }: HeaderProps) {
           variant="ghost"
           size="sm"
           onClick={handleSignOut}
-          className="text-slate-400 hover:text-white hover:bg-slate-800"
+          className="text-zinc-400 hover:text-white hover:bg-zinc-800"
         >
           <LogOut className="w-4 h-4 mr-1" />
           Salir
