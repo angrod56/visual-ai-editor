@@ -67,7 +67,7 @@ export function ViralClipsPanel({ projectId, projectReady, onClipsStarted }: Pro
   const [clips, setClips] = useState<ViralClip[]>([]);
   const [done, setDone] = useState(false);
   const [subtitles, setSubtitles] = useState(false);
-  const [subtitleStyle, setSubtitleStyle] = useState('clasico');
+  const [subtitleStyle, setSubtitleStyle] = useState('capcut');
   const [verticalCrop, setVerticalCrop] = useState(false);
 
   const handleGenerate = async () => {

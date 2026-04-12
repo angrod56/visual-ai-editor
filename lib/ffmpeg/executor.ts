@@ -181,7 +181,7 @@ async function executeSingleOperation(
       case 'subtitle': {
         // Use drawtext filter — works without libass/fontconfig on any FFmpeg build
         const { segments = [], style = 'clasico' } = op.parameters as {
-          segments?: Array<{ start: number; end: number; text: string }>;
+          segments?: Array<{ start: number; end: number; text: string; words?: Array<{ word: string; start: number; end: number }> }>;
           style?: string;
         };
 
@@ -260,50 +260,93 @@ function buildAtempoFilters(speed: number): string {
 /** Absolute path to the bundled font used by drawtext (no system fonts needed). */
 const BUNDLED_FONT = path.join(process.cwd(), 'lib', 'fonts', 'DejaVuSans-Bold.ttf');
 
+type SegmentWithWords = {
+  start: number;
+  end: number;
+  text: string;
+  words?: Array<{ word: string; start: number; end: number }>;
+};
+
+/** Escape text for FFmpeg drawtext filter syntax. */
+function escapeDrawtext(raw: string): string {
+  return raw.trim()
+    .replace(/\\/g, '/')
+    .replace(/'/g, '\u2019')   // right single quote — avoids filter quoting issues
+    .replace(/:/g, '\u02d0')   // modifier triangular colon
+    .replace(/\[/g, '(')
+    .replace(/\]/g, ')')
+    .replace(/\n/g, ' ');
+}
+
+/** Build a single drawtext filter string for one word/phrase at a given time range. */
+function makeDrawtext(
+  text: string,
+  start: number,
+  end: number,
+  escapedFont: string,
+  dt: { fontsize: number; fontcolor: string; borderw: number; bordercolor: string; shadowx: number; shadowy: number; shadowcolor: string; box: number; boxcolor: string }
+): string {
+  const enable = `between(t\\,${start.toFixed(3)}\\,${end.toFixed(3)})`;
+  const parts = [
+    `fontfile='${escapedFont}'`,
+    `text='${escapeDrawtext(text)}'`,
+    `fontsize=${dt.fontsize}`,
+    `fontcolor=${dt.fontcolor}`,
+    `borderw=${dt.borderw}`,
+    `bordercolor=${dt.bordercolor}`,
+    ...(dt.shadowx !== 0 || dt.shadowy !== 0
+      ? [`shadowx=${dt.shadowx}`, `shadowy=${dt.shadowy}`, `shadowcolor=${dt.shadowcolor}`]
+      : []),
+    ...(dt.box ? [`box=1`, `boxcolor=${dt.boxcolor}`, `boxborderw=8`] : []),
+    `x=(w-text_w)/2`,
+    `y=h-text_h-60`,
+    `enable='${enable}'`,
+  ];
+  return `drawtext=${parts.join(':')}`;
+}
+
 /**
  * Build an array of drawtext filters for burning subtitles into video.
- * Uses drawtext with a bundled font — works without libass/fontconfig.
+ *
+ * - Style "capcut": renders one word at a time using word-level timestamps.
+ *   Falls back to proportional distribution when word data is unavailable.
+ * - All other styles: one filter per segment (existing behavior).
  */
-function buildDrawtextFilters(
-  segments: Array<{ start: number; end: number; text: string }>,
-  styleId: string
-): string[] {
+function buildDrawtextFilters(segments: SegmentWithWords[], styleId: string): string[] {
   const s = getSubtitleStyle(styleId);
   const dt = s.dt;
-
-  // Escape the font path for FFmpeg filter syntax (colons must be escaped)
   const escapedFont = BUNDLED_FONT.replace(/\\/g, '/').replace(/:/g, '\\:');
 
-  return segments.map((seg) => {
-    // Escape text for FFmpeg drawtext: replace special chars
-    const text = seg.text.trim()
-      .replace(/\\/g, '/')             // backslash → forward slash
-      .replace(/'/g, '\u2019')         // apostrophe → right single quote (avoids quoting issues)
-      .replace(/:/g, '\u02d0')         // colon → modifier letter triangular colon
-      .replace(/\[/g, '(')
-      .replace(/\]/g, ')')
-      .replace(/\n/g, ' ');
+  if (styleId === 'capcut') {
+    // Word-by-word rendering
+    const filters: string[] = [];
+    for (const seg of segments) {
+      if (seg.words && seg.words.length > 0) {
+        // Exact word timestamps from Whisper
+        for (const w of seg.words) {
+          if (w.word.trim()) {
+            filters.push(makeDrawtext(w.word, w.start, w.end, escapedFont, dt));
+          }
+        }
+      } else {
+        // Proportional fallback: distribute segment duration across words
+        const words = seg.text.trim().split(/\s+/).filter(Boolean);
+        const dur = Math.max(0.01, seg.end - seg.start);
+        const wDur = dur / words.length;
+        words.forEach((word, i) => {
+          const wStart = seg.start + i * wDur;
+          const wEnd = wStart + wDur;
+          filters.push(makeDrawtext(word, wStart, wEnd, escapedFont, dt));
+        });
+      }
+    }
+    return filters;
+  }
 
-    const enable = `between(t\\,${seg.start.toFixed(3)}\\,${seg.end.toFixed(3)})`;
-
-    const parts = [
-      `fontfile='${escapedFont}'`,
-      `text='${text}'`,
-      `fontsize=${dt.fontsize}`,
-      `fontcolor=${dt.fontcolor}`,
-      `borderw=${dt.borderw}`,
-      `bordercolor=${dt.bordercolor}`,
-      ...(dt.shadowx !== 0 || dt.shadowy !== 0
-        ? [`shadowx=${dt.shadowx}`, `shadowy=${dt.shadowy}`, `shadowcolor=${dt.shadowcolor}`]
-        : []),
-      ...(dt.box ? [`box=1`, `boxcolor=${dt.boxcolor}`, `boxborderw=8`] : []),
-      `x=(w-text_w)/2`,
-      `y=h-text_h-60`,
-      `enable='${enable}'`,
-    ];
-
-    return `drawtext=${parts.join(':')}`;
-  });
+  // Segment-level rendering for all other styles
+  return segments.map((seg) =>
+    makeDrawtext(seg.text, seg.start, seg.end, escapedFont, dt)
+  );
 }
 
 /**

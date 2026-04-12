@@ -32,7 +32,7 @@ interface SelectedOps {
 
 const DEFAULT_OPS: SelectedOps = {
   subtitles: false,
-  subtitleStyle: 'clasico',
+  subtitleStyle: 'capcut',
   speed: false,
   speedFactor: 1.5,
   verticalCrop: false,

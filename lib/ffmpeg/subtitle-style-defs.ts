@@ -35,6 +35,22 @@ export interface SubtitleStyle {
 
 export const SUBTITLE_STYLES: SubtitleStyle[] = [
   {
+    id: 'capcut',
+    label: 'CapCut',
+    fontName: 'Arial Black',
+    fontSize: 72,
+    bold: true,
+    italic: false,
+    primaryColor: '&H00FFFFFF',
+    outlineColor: '&H00000000',
+    shadowColor: '&H00000000',
+    outline: 5,
+    shadow: 3,
+    alignment: 2,
+    dt: { fontsize: 72, fontcolor: 'white', borderw: 5, bordercolor: 'black', shadowx: 3, shadowy: 3, shadowcolor: 'black@0.7', box: 0, boxcolor: 'black@0.0' },
+    preview: { bg: 'bg-black', text: 'Aa', textColor: 'text-white font-black', border: 'border-amber-600' },
+  },
+  {
     id: 'clasico',
     label: 'Clásico',
     fontName: 'Arial',
