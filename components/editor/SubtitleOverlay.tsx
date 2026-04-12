@@ -72,7 +72,7 @@ function CapcutWords({ words, activeIdx }: { words: string[]; activeIdx: number 
               : 'text-white'
           )}
           style={{
-            fontFamily: '"Arial Black", "Helvetica Neue", Arial, sans-serif',
+            fontFamily: 'var(--font-caption), "Arial Black", "Helvetica Neue", Arial, sans-serif',
             fontWeight: 900,
             fontSize: 'inherit',
             WebkitTextStroke: i === activeIdx ? '1.5px #000' : '1.5px #000',
@@ -100,7 +100,7 @@ function FilledWords({ words, activeIdx }: { words: string[]; activeIdx: number 
               : 'bg-black/70 text-white'
           )}
           style={{
-            fontFamily: '"Arial Black", "Helvetica Neue", Arial, sans-serif',
+            fontFamily: 'var(--font-caption), "Arial Black", "Helvetica Neue", Arial, sans-serif',
             fontWeight: 900,
             fontSize: 'inherit',
           }}
@@ -117,7 +117,7 @@ function KaraokeWords({ words, activeIdx }: { words: string[]; activeIdx: number
     <div
       className="flex flex-wrap justify-center gap-x-[0.28em] gap-y-1"
       style={{
-        fontFamily: '"Arial Black", "Helvetica Neue", Arial, sans-serif',
+        fontFamily: 'var(--font-caption), "Arial Black", "Helvetica Neue", Arial, sans-serif',
         fontWeight: 900,
         fontSize: 'inherit',
       }}
@@ -152,7 +152,7 @@ function MinimalWords({ words, activeIdx }: { words: string[]; activeIdx: number
             i === activeIdx ? 'text-white scale-105' : 'text-white/70'
           )}
           style={{
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontFamily: 'var(--font-caption), system-ui, -apple-system, sans-serif',
             fontWeight: 700,
             fontSize: 'inherit',
             textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8)',
