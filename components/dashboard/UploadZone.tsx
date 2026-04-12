@@ -77,6 +77,9 @@ export function UploadZone() {
           throw new Error((err as { error?: string }).error ?? 'Error al transcribir');
         }
 
+        // 4. Generate thumbnail (fire-and-forget — don't block redirect)
+        fetch(`/api/projects/${project_id}/thumbnail`, { method: 'POST' }).catch(() => {});
+
         setStage('done');
 
         // Redirect to editor after short delay

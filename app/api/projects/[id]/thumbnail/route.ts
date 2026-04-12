@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { downloadToBuffer, uploadBuffer, getSignedUrl } from '@/lib/utils/storage';
+import { downloadPartialBuffer, uploadBuffer, getSignedUrl } from '@/lib/utils/storage';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -50,17 +50,19 @@ export async function POST(
   const tmpThumb = path.join('/tmp', `${projectId}_tn.jpg`);
 
   try {
-    const buffer = await downloadToBuffer(project.storage_path);
+    // Download only the first 8 MB — enough to extract a frame near the start
+    // without pulling the full video (avoids Vercel 60s timeout for long videos)
+    const buffer = await downloadPartialBuffer(project.storage_path, 8 * 1024 * 1024);
     await fs.writeFile(tmpVideo, buffer);
-
-    const duration = project.duration_seconds ?? 10;
-    const timestamp = Math.min(5, duration * 0.1);
 
     await new Promise<void>((resolve, reject) => {
       getFFmpeg()(tmpVideo)
-        .seekInput(timestamp)
-        .frames(1)
-        .outputOptions(['-vf', 'scale=640:-1', '-q:v', '3'])
+        .seekInput(0)          // first frame — reliable with partial file
+        .outputOptions([
+          '-vframes', '1',
+          '-vf', 'scale=640:-2', // -2 keeps even height (required by some encoders)
+          '-q:v', '3',
+        ])
         .output(tmpThumb)
         .on('end', () => resolve())
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

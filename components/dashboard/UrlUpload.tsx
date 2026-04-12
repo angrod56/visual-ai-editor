@@ -72,6 +72,9 @@ export function UrlUpload({ onSuccess }: Props) {
         body: JSON.stringify({ project_id: projectId }),
       });
 
+      // Generate thumbnail (fire-and-forget — don't block redirect)
+      fetch(`/api/projects/${projectId}/thumbnail`, { method: 'POST' }).catch(() => {});
+
       setStage('done');
       toast.success('Video importado y transcrito');
       onSuccess?.();

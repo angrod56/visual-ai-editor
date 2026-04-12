@@ -58,6 +58,29 @@ export async function deleteFile(storagePath: string): Promise<void> {
 }
 
 /**
+ * Download only the first `maxBytes` of a file using an HTTP Range request.
+ * Much faster than downloading the full video when you only need a thumbnail.
+ */
+export async function downloadPartialBuffer(
+  storagePath: string,
+  maxBytes = 8 * 1024 * 1024 // 8 MB default
+): Promise<Buffer> {
+  const response = await r2.send(
+    new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: storagePath,
+      Range: `bytes=0-${maxBytes - 1}`,
+    })
+  );
+  if (!response.Body) throw new Error(`R2: objeto vacío en ${storagePath}`);
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
  * Stream a fetch Response body directly to R2 using multipart upload.
  * Never buffers the full video on disk or in memory — parts are uploaded
  * as they arrive, so total time ≈ max(download, upload) instead of sum.

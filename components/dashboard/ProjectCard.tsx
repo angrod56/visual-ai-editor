@@ -25,9 +25,10 @@ const STATUS_LABELS: Record<string, string> = {
 interface Props {
   project: VideoProject;
   onDeleted: () => void;
+  thumbnailDelay?: number; // ms to wait before requesting thumbnail (stagger across cards)
 }
 
-export function ProjectCard({ project, onDeleted }: Props) {
+export function ProjectCard({ project, onDeleted, thumbnailDelay = 0 }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState(project.thumbnail_url ?? null);
   const [thumbLoading, setThumbLoading] = useState(false);
@@ -38,22 +39,25 @@ export function ProjectCard({ project, onDeleted }: Props) {
     if (thumbnailUrl && !imgError) return;
 
     let cancelled = false;
-    setThumbLoading(true);
+    const request = () => {
+      if (cancelled) return;
+      setThumbLoading(true);
+      fetch(`/api/projects/${project.id}/thumbnail`, { method: 'POST' })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && data.thumbnail_url) {
+            setThumbnailUrl(data.thumbnail_url);
+            setImgError(false);
+          }
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setThumbLoading(false); });
+    };
 
-    fetch(`/api/projects/${project.id}/thumbnail`, { method: 'POST' })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && data.thumbnail_url) {
-          setThumbnailUrl(data.thumbnail_url);
-          setImgError(false);
-        }
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setThumbLoading(false); });
-
-    return () => { cancelled = true; };
+    const timer = setTimeout(request, thumbnailDelay);
+    return () => { cancelled = true; clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id, project.status]);
+  }, [project.id, project.status, thumbnailDelay]);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
