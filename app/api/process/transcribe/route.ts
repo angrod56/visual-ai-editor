@@ -71,23 +71,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ transcription: { segments: [] }, warning: 'Audio demasiado largo para transcribir' });
     }
 
-    // 4. Send audio to Whisper
+    // 4. Send audio to Whisper with word-level timestamps
     const audioBuffer = await fs.readFile(tmpAudio);
     const transcriptionResponse = await openai.audio.transcriptions.create({
       file: new File([audioBuffer], 'audio.mp3', { type: 'audio/mpeg' }),
       model: 'whisper-1',
       response_format: 'verbose_json',
-      timestamp_granularities: ['segment'],
+      timestamp_granularities: ['word', 'segment'],
     });
 
-    // 5. Normalize segments
+    // 5. Normalize — attach word timestamps to each segment
+    type WhisperWord = { word: string; start: number; end: number };
     type WhisperSegment = { start: number; end: number; text: string };
-    const rawSegments = (transcriptionResponse as unknown as { segments?: WhisperSegment[] }).segments ?? [];
-    const segments = rawSegments.map((s) => ({
-      start: s.start,
-      end: s.end,
-      text: s.text.trim(),
-    }));
+    const raw = transcriptionResponse as unknown as {
+      segments?: WhisperSegment[];
+      words?: WhisperWord[];
+    };
+
+    const allWords: WhisperWord[] = raw.words ?? [];
+    const rawSegments: WhisperSegment[] = raw.segments ?? [];
+
+    const segments = rawSegments.map((s) => {
+      const segWords = allWords
+        .filter((w) => w.start >= s.start - 0.05 && w.end <= s.end + 0.05)
+        .map((w) => ({ word: w.word.trim(), start: w.start, end: w.end }));
+      return {
+        start: s.start,
+        end: s.end,
+        text: s.text.trim(),
+        ...(segWords.length > 0 ? { words: segWords } : {}),
+      };
+    });
 
     const transcription = {
       segments,

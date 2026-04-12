@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { TranscriptionSegment } from '@/types';
+import { TranscriptionSegment, TranscriptionWord } from '@/types';
 import { cn } from '@/lib/utils';
 
 export type SubtitleDisplayStyle = 'capcut' | 'filled' | 'karaoke' | 'minimal';
@@ -17,14 +17,35 @@ function getActiveSegment(segments: TranscriptionSegment[], t: number) {
   return segments.find((s) => t >= s.start && t <= s.end + 0.05) ?? null;
 }
 
-/** Distribute segment duration evenly across words to estimate the active word index */
+/**
+ * Returns active word index.
+ * If the segment has word-level timestamps, use exact match.
+ * Otherwise fall back to proportional distribution.
+ */
 function getActiveWordIndex(segment: TranscriptionSegment, t: number): number {
-  const words = segment.text.trim().split(/\s+/);
-  if (words.length <= 1) return 0;
+  if (segment.words && segment.words.length > 0) {
+    const words = segment.words;
+    // Find last word whose start <= currentTime
+    let idx = 0;
+    for (let i = 0; i < words.length; i++) {
+      if (t >= words[i].start) idx = i;
+    }
+    return idx;
+  }
+  // Proportional fallback
+  const wordCount = segment.text.trim().split(/\s+/).length;
+  if (wordCount <= 1) return 0;
   const elapsed = Math.max(0, t - segment.start);
   const dur = Math.max(0.01, segment.end - segment.start);
-  const idx = Math.floor((elapsed / dur) * words.length);
-  return Math.min(idx, words.length - 1);
+  return Math.min(Math.floor((elapsed / dur) * wordCount), wordCount - 1);
+}
+
+/** Extract display words from segment — use word timestamps if available */
+function getDisplayWords(segment: TranscriptionSegment): string[] {
+  if (segment.words && segment.words.length > 0) {
+    return segment.words.map((w: TranscriptionWord) => w.word);
+  }
+  return segment.text.trim().split(/\s+/);
 }
 
 // ─── Style renderers ──────────────────────────────────────────────────────────
@@ -156,7 +177,7 @@ export function SubtitleOverlay({
 
   if (!active) return null;
 
-  const words = active.text.trim().split(/\s+/);
+  const words = getDisplayWords(active);
 
   const posClass =
     position === 'top'
