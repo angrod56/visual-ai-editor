@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { VideoExport } from '@/types';
 import { formatFileSize, formatDuration } from '@/lib/utils/video';
 import { Download, FileVideo, Film, Headphones, Zap, Play, X, Loader2, Trash2, Share2 } from 'lucide-react';
@@ -32,6 +33,8 @@ const TYPE_LABELS: Record<string, string> = {
 interface Props {
   exports: VideoExport[];
   onDeleted?: (id: string) => void;
+  onPreviewOpen?: () => void;
+  onPreviewClose?: () => void;
 }
 
 interface PreviewState {
@@ -42,12 +45,19 @@ interface PreviewState {
   duration?: number | null;
 }
 
-export function ExportPanel({ exports, onDeleted }: Props) {
+export function ExportPanel({ exports, onDeleted, onPreviewOpen, onPreviewClose }: Props) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
   const [sharing, setSharing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const portalRootRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    portalRootRef.current = document.body;
+    setMounted(true);
+  }, []);
 
   const fetchSignedUrl = async (exportId: string) => {
     const res = await fetch(`/api/exports/${exportId}`);
@@ -60,6 +70,9 @@ export function ExportPanel({ exports, onDeleted }: Props) {
     setLoadingPreview(exp.id);
     try {
       const url = await fetchSignedUrl(exp.id);
+      // Pause any playing video in the page so it doesn't show through the modal
+      document.querySelectorAll<HTMLVideoElement>('video').forEach((v) => v.pause());
+      onPreviewOpen?.();
       setPreview({
         url,
         isAudio: exp.export_type === 'audio',
@@ -226,11 +239,12 @@ export function ExportPanel({ exports, onDeleted }: Props) {
         })}
       </div>
 
-      {/* Preview modal */}
-      {preview && (
+      {/* Preview modal — rendered in document.body via portal to escape all stacking contexts */}
+      {mounted && preview && portalRootRef.current && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-          onClick={() => setPreview(null)}
+          className="fixed inset-0 flex items-center justify-center bg-black p-4"
+          style={{ zIndex: 9999 }}
+          onClick={() => { setPreview(null); onPreviewClose?.(); }}
         >
           <div
             className="relative w-full max-w-2xl bg-zinc-900 rounded-2xl border border-zinc-700 overflow-hidden shadow-2xl"
@@ -248,7 +262,7 @@ export function ExportPanel({ exports, onDeleted }: Props) {
                 )}
               </div>
               <button
-                onClick={() => setPreview(null)}
+                onClick={() => { setPreview(null); onPreviewClose?.(); }}
                 className="text-zinc-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-zinc-800"
               >
                 <X className="w-4 h-4" />
@@ -258,23 +272,14 @@ export function ExportPanel({ exports, onDeleted }: Props) {
             {/* Player */}
             <div className={cn('bg-black', preview.isAudio ? 'p-6' : '')}>
               {preview.isAudio ? (
-                <audio
-                  src={preview.url}
-                  controls
-                  autoPlay
-                  className="w-full"
-                />
+                <audio src={preview.url} controls autoPlay className="w-full" />
               ) : (
-                <video
-                  src={preview.url}
-                  controls
-                  autoPlay
-                  className="w-full max-h-[70vh] object-contain"
-                />
+                <video src={preview.url} controls autoPlay className="w-full max-h-[70vh] object-contain" />
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        portalRootRef.current
       )}
     </>
   );

@@ -89,7 +89,11 @@ export function buildDirectPlan(
 
   // 5. Subtitles last — burned onto final frame dimensions
   if (options.subtitles) {
-    pushOp('subtitle', {}, `Subtítulos (${options.subtitleStyle ?? 'clasico'})`);
+    // If trim was applied, pass the offset so executor can adjust segment timestamps
+    const trimOffset = (options.trim && (options.trimStart ?? 0) > 0)
+      ? -(options.trimStart ?? 0)
+      : 0;
+    pushOp('subtitle', { trimOffset }, `Subtítulos (${options.subtitleStyle ?? 'clasico'})`);
   }
 
   // Last op must output 'final'

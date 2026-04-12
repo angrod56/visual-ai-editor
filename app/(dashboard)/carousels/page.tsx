@@ -10,7 +10,9 @@ import {
   Layout, Loader2, Sparkles, Download,
   ChevronLeft, ChevronRight, ArrowLeft,
   ImagePlus, X, ChevronDown, Image as ImageIcon,
-  Save, Trash2, Map, FolderOpen, Clock,
+  Save, Trash2, Map, FolderOpen, Clock, Film, Type,
+  GraduationCap, Megaphone, BookOpen, BarChart2,
+  TableProperties, Copy, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -18,8 +20,21 @@ import { cn } from '@/lib/utils';
 import JSZip from 'jszip';
 
 const PLATFORMS = ['Instagram', 'LinkedIn', 'Facebook', 'Twitter/X'];
-const TONES = ['Educativo', 'Inspirador', 'Tips prácticos', 'Historia', 'Ventas'];
-const SLIDE_COUNTS = [5, 7, 9, 10];
+const SLIDE_COUNTS = [5, 7, 9, 10, 12];
+
+const CAROUSEL_TYPES = [
+  { key: 'educativo',    label: 'Educativo',     icon: GraduationCap, desc: 'Tips / Pasos / Tutorial' },
+  { key: 'promocional',  label: 'Promocional',   icon: Megaphone,     desc: 'Lanzamiento / Oferta' },
+  { key: 'storytelling', label: 'Storytelling',  icon: BookOpen,      desc: 'Narrativo / Historia' },
+  { key: 'caso_estudio', label: 'Caso de Éxito', icon: BarChart2,     desc: 'Resultados / Prueba Social' },
+] as const;
+type CarouselTypeKey = typeof CAROUSEL_TYPES[number]['key'];
+
+const BRANDS = [
+  { key: 'mentoriasangel', label: '@mentoriasangel', color: 'text-orange-400' },
+  { key: 'generico',       label: 'Genérico',        color: 'text-zinc-400' },
+] as const;
+type BrandKey = typeof BRANDS[number]['key'];
 
 const FIELD = 'w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500 transition-colors';
 
@@ -28,13 +43,26 @@ export default function CarouselsPage() {
   const [pageMode, setPageMode] = useState<'carousel' | 'strategy'>('carousel');
 
   // — form
-  const [topic, setTopic]         = useState('');
-  const [niche, setNiche]         = useState('');
-  const [audience, setAudience]   = useState('');
-  const [platform, setPlatform]   = useState('Instagram');
-  const [tone, setTone]           = useState('Ventas');
+  const [topic, setTopic]           = useState('');
+  const [niche, setNiche]           = useState('');
+  const [audience, setAudience]     = useState('');
+  const [platform, setPlatform]     = useState('Instagram');
+  const [carouselType, setCarouselType] = useState<CarouselTypeKey>('educativo');
+  const [brand, setBrand]           = useState<BrandKey>('mentoriasangel');
   const [slideCount, setSlideCount] = useState(7);
-  const [ctaText, setCtaText]     = useState('');
+  const [ctaText, setCtaText]       = useState('');
+
+  // — canva guide
+  const [canvaGuide, setCanvaGuide]     = useState<Array<{ id: number; type: string; headline: string; body: string; emoji: string; canva_note?: string }>>([]);
+  const [showCanvaGuide, setShowCanvaGuide] = useState(false);
+  const [copiedGuide, setCopiedGuide]   = useState(false);
+
+  // — source mode (manual topic vs from uploaded video)
+  type VideoProject = { id: string; title: string; status: string; transcription_segments?: Array<{ start: number; end: number; text: string }> };
+  const [sourceMode, setSourceMode]           = useState<'manual' | 'video'>('manual');
+  const [videoProjects, setVideoProjects]     = useState<VideoProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<VideoProject | null>(null);
 
   // — shared
   const [themeKey, setThemeKey]         = useState('dark');
@@ -79,6 +107,24 @@ export default function CarouselsPage() {
   }, []);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  const fetchProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    try {
+      const res = await fetch('/api/projects');
+      if (res.ok) {
+        const data = await res.json();
+        setVideoProjects(data.filter((p: VideoProject) => p.status === 'ready'));
+      }
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, []);
+
+  const handleSourceMode = (mode: 'manual' | 'video') => {
+    setSourceMode(mode);
+    if (mode === 'video' && videoProjects.length === 0) fetchProjects();
+  };
 
   const saveCarousel = async () => {
     if (!slides.length) return;
@@ -190,21 +236,38 @@ export default function CarouselsPage() {
 
   // ── Generate ───────────────────────────────────────────────────────────
   const generate = async () => {
-    if (!topic.trim()) { toast.error('Escribe el tema del carrusel'); return; }
+    if (sourceMode === 'manual' && !topic.trim()) { toast.error('Escribe el tema del carrusel'); return; }
+    if (sourceMode === 'video' && !selectedProject) { toast.error('Selecciona un video'); return; }
+
+    // Build payload
+    let payload: Record<string, unknown> = { niche, audience, platform, slideCount, carouselType, brand, ctaText: ctaText.trim() || undefined };
+
+    if (sourceMode === 'video' && selectedProject) {
+      const segs = selectedProject.transcription_segments ?? [];
+      const transcription = segs.map((s) => s.text).join(' ').trim();
+      if (!transcription) { toast.error('Este video no tiene transcripción'); return; }
+      payload = { ...payload, topic: topic.trim() || selectedProject.title, transcription };
+    } else {
+      payload = { ...payload, topic };
+    }
+
     setGenerating(true);
     setSlides([]);
+    setCanvaGuide([]);
+    setShowCanvaGuide(false);
     try {
       const res = await fetch('/api/carousels/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, niche, audience, platform, slideCount, tone, ctaText: ctaText.trim() || undefined }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al generar'); return; }
       const generated: CarouselSlide[] = data.slides ?? [];
       thumbRefs.current = new Array(generated.length).fill(null);
       setSlides(generated);
-      setCarouselTitle(data.title ?? topic);
+      setCanvaGuide(data.slides ?? []);
+      setCarouselTitle(data.title ?? (topic || selectedProject?.title || ''));
       setActiveIdx(0);
       setBgSlides(new Set());
       setOpenSlides(new Set([0, generated.length - 1]));
@@ -223,12 +286,13 @@ export default function CarouselsPage() {
     setPageMode('carousel');
     setMode('form');
     setTopic(item.topic);
-    setTone('Ventas');
+    setCarouselType('promocional');
     setCtaText(item.cta_idea);
     // Small delay so state updates render before auto-generating
     await new Promise((r) => setTimeout(r, 80));
     setGenerating(true);
     setSlides([]);
+    setCanvaGuide([]);
     try {
       const res = await fetch('/api/carousels/generate', {
         method: 'POST',
@@ -239,7 +303,8 @@ export default function CarouselsPage() {
           audience,
           platform,
           slideCount,
-          tone: 'Ventas',
+          carouselType: 'promocional',
+          brand,
           ctaText: item.cta_idea,
         }),
       });
@@ -248,6 +313,7 @@ export default function CarouselsPage() {
       const generated: CarouselSlide[] = data.slides ?? [];
       thumbRefs.current = new Array(generated.length).fill(null);
       setSlides(generated);
+      setCanvaGuide(data.slides ?? []);
       setCarouselTitle(data.title ?? item.topic);
       setActiveIdx(0);
       setBgSlides(new Set());
@@ -327,6 +393,13 @@ export default function CarouselsPage() {
         </div>
         {pageMode === 'carousel' && mode === 'editor' && (
           <div className="flex items-center gap-2 shrink-0 mt-1">
+            {canvaGuide.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => setShowCanvaGuide(true)}
+                className="gap-1.5 text-xs h-8 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500">
+                <TableProperties className="w-3.5 h-3.5" />
+                Guión Canva
+              </Button>
+            )}
             <Button size="sm" onClick={saveCarousel} disabled={saving || !slides.length}
               className={cn(
                 'gap-1.5 text-xs h-8',
@@ -400,6 +473,80 @@ export default function CarouselsPage() {
 
           /* ── Generation form ── */
           <div className="space-y-5">
+
+            {/* ── Source toggle ── */}
+            <div>
+              <label className="text-xs text-zinc-400 mb-2 block">Fuente del contenido</label>
+              <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <button
+                  onClick={() => handleSourceMode('manual')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all',
+                    sourceMode === 'manual' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
+                  )}
+                >
+                  <Type className="w-3.5 h-3.5" />
+                  Tema manual
+                </button>
+                <button
+                  onClick={() => handleSourceMode('video')}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all',
+                    sourceMode === 'video' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
+                  )}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  Desde video
+                </button>
+              </div>
+            </div>
+
+            {/* ── Video picker (only when sourceMode === 'video') ── */}
+            {sourceMode === 'video' && (
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">Selecciona un video transcrito</label>
+                {loadingProjects ? (
+                  <div className="flex items-center gap-2 py-3 text-zinc-500 text-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Cargando videos...
+                  </div>
+                ) : videoProjects.length === 0 ? (
+                  <p className="text-xs text-zinc-600 py-2">No hay videos con transcripción disponibles. Sube y procesa un video primero.</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                    {videoProjects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedProject(p)}
+                        className={cn(
+                          'w-full text-left px-3 py-2 rounded-lg border text-sm transition-colors flex items-center gap-2',
+                          selectedProject?.id === p.id
+                            ? 'bg-amber-500/15 border-amber-500/40 text-white'
+                            : 'bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-zinc-500'
+                        )}
+                      >
+                        <Film className="w-3.5 h-3.5 shrink-0 text-zinc-500" />
+                        <span className="truncate">{p.title}</span>
+                        {selectedProject?.id === p.id && (
+                          <span className="ml-auto text-amber-400 text-xs shrink-0">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedProject && (
+                  <div className="mt-2">
+                    <label className="text-xs text-zinc-400 mb-1 block">Enfoque del carrusel (opcional)</label>
+                    <input value={topic} onChange={(e) => setTopic(e.target.value)}
+                      placeholder="ej: enfocarse en los consejos de productividad del video"
+                      className={FIELD} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Topic input (only when sourceMode === 'manual') ── */}
+            {sourceMode === 'manual' && (
             <div>
               <label className="text-xs text-zinc-400 mb-1 block">Tema del carrusel *</label>
               <input value={topic} onChange={(e) => setTopic(e.target.value)}
@@ -407,6 +554,7 @@ export default function CarouselsPage() {
                 placeholder="ej: 7 errores al invertir, cómo construir hábitos…"
                 className={FIELD} />
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -421,7 +569,46 @@ export default function CarouselsPage() {
               </div>
             </div>
 
+            {/* ── Tipo de carrusel ── */}
+            <div>
+              <label className="text-xs text-zinc-400 mb-2 block">Tipo de carrusel</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CAROUSEL_TYPES.map(({ key, label, icon: Icon, desc }) => (
+                  <button
+                    key={key}
+                    onClick={() => setCarouselType(key)}
+                    className={cn(
+                      'flex items-start gap-2 px-3 py-2.5 rounded-xl border text-left transition-colors',
+                      carouselType === key
+                        ? 'bg-amber-500/15 border-amber-500/50 text-white'
+                        : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300'
+                    )}
+                  >
+                    <Icon className={cn('w-3.5 h-3.5 mt-0.5 shrink-0', carouselType === key ? 'text-amber-400' : '')} />
+                    <div>
+                      <p className="text-xs font-semibold leading-tight">{label}</p>
+                      <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Marca + Plataforma ── */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">Marca</label>
+                <div className="flex flex-col gap-1">
+                  {BRANDS.map(({ key, label, color }) => (
+                    <button key={key} onClick={() => setBrand(key)}
+                      className={cn('px-2.5 py-1.5 text-xs rounded-lg border text-left transition-colors',
+                        brand === key ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : `bg-zinc-800 ${color} border-zinc-700 hover:border-zinc-500`)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="text-xs text-zinc-400 mb-1.5 block">Plataforma</label>
                 <div className="flex flex-wrap gap-1">
@@ -435,19 +622,6 @@ export default function CarouselsPage() {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-zinc-400 mb-1.5 block">Tono</label>
-                <div className="flex flex-wrap gap-1">
-                  {TONES.map((t) => (
-                    <button key={t} onClick={() => setTone(t)}
-                      className={cn('px-2 py-1 text-xs rounded-md border transition-colors',
-                        tone === t ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                          : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300')}>
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div>
@@ -455,7 +629,7 @@ export default function CarouselsPage() {
               <div className="flex gap-2">
                 {SLIDE_COUNTS.map((n) => (
                   <button key={n} onClick={() => setSlideCount(n)}
-                    className={cn('w-14 py-2 text-sm font-semibold rounded-xl border transition-colors',
+                    className={cn('w-12 py-2 text-sm font-semibold rounded-xl border transition-colors',
                       slideCount === n ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                         : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300')}>
                     {n}
@@ -476,8 +650,11 @@ export default function CarouselsPage() {
 
             <ThemeSelector themeKey={themeKey} onChange={setThemeKey} />
 
-            <Button onClick={generate} disabled={generating || !topic.trim()}
-              className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-black font-semibold gap-2 h-11">
+            <Button
+              onClick={generate}
+              disabled={generating || (sourceMode === 'manual' ? !topic.trim() : !selectedProject)}
+              className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-black font-semibold gap-2 h-11"
+            >
               {generating
                 ? <><Loader2 className="w-5 h-5 animate-spin" />Generando carrusel…</>
                 : <><Sparkles className="w-5 h-5" />Generar carrusel con IA</>}
@@ -805,6 +982,85 @@ export default function CarouselsPage() {
         )}
       </div>
       </div>
+      )}
+
+      {/* ── Canva Guide Modal ── */}
+      {showCanvaGuide && canvaGuide.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowCanvaGuide(false)}
+        >
+          <div
+            className="relative w-full max-w-3xl max-h-[80vh] bg-zinc-900 rounded-2xl border border-zinc-700 overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <TableProperties className="w-4 h-4 text-amber-400" />
+                <span className="font-semibold text-white text-sm">Guión para diseñador (Canva)</span>
+                <span className="text-xs text-zinc-500">{canvaGuide.length} slides</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const header = '| # | Tipo | Titular | Cuerpo | Emoji | Nota para diseñador |\n|---|------|---------|--------|-------|---------------------|\n';
+                    const rows = canvaGuide.map((s, i) =>
+                      `| ${i + 1} | ${s.type} | ${s.headline} | ${s.body} | ${s.emoji} | ${s.canva_note ?? '—'} |`
+                    ).join('\n');
+                    await navigator.clipboard.writeText(header + rows);
+                    setCopiedGuide(true);
+                    toast.success('Guión copiado al portapapeles');
+                    setTimeout(() => setCopiedGuide(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
+                >
+                  {copiedGuide ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedGuide ? 'Copiado' : 'Copiar tabla'}
+                </button>
+                <button onClick={() => setShowCanvaGuide(false)} className="text-zinc-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-zinc-800">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-auto flex-1 p-4">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-zinc-400 border-b border-zinc-800">
+                    <th className="text-left py-2 pr-3 font-medium w-8">#</th>
+                    <th className="text-left py-2 pr-3 font-medium w-20">Tipo</th>
+                    <th className="text-left py-2 pr-3 font-medium">Titular</th>
+                    <th className="text-left py-2 pr-3 font-medium">Cuerpo</th>
+                    <th className="text-left py-2 pr-3 font-medium w-8">Em.</th>
+                    <th className="text-left py-2 font-medium">Nota diseñador</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {canvaGuide.map((s, i) => (
+                    <tr key={i} className={cn('border-b border-zinc-800/50 align-top', i % 2 === 0 ? 'bg-zinc-800/20' : '')}>
+                      <td className="py-2.5 pr-3 text-zinc-500 font-mono">{i + 1}</td>
+                      <td className="py-2.5 pr-3">
+                        <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium', {
+                          'bg-amber-500/20 text-amber-300': s.type === 'cover',
+                          'bg-blue-500/20 text-blue-300': s.type === 'content',
+                          'bg-green-500/20 text-green-300': s.type === 'cta',
+                        })}>
+                          {s.type}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-3 text-white font-medium leading-snug max-w-[180px]">{s.headline}</td>
+                      <td className="py-2.5 pr-3 text-zinc-400 leading-snug max-w-[180px]">{s.body}</td>
+                      <td className="py-2.5 pr-3 text-lg">{s.emoji}</td>
+                      <td className="py-2.5 text-zinc-500 leading-snug italic">{s.canva_note ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

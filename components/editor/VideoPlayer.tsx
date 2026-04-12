@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, Captions, CaptionsOff } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Captions, CaptionsOff, Download, Loader2, ArrowRightToLine, ArrowLeftToLine } from 'lucide-react';
 import { formatDuration } from '@/lib/utils/video';
 import { TranscriptionSegment } from '@/types';
 import { SubtitleOverlay, SubtitleDisplayStyle, SubtitleFontSize } from './SubtitleOverlay';
@@ -31,14 +31,25 @@ const SIZE_OPTS: { key: SubtitleFontSize; label: string }[] = [
   { key: 'xl', label: 'XL' },
 ];
 
+export interface SubtitleExportSettings {
+  style: SubtitleDisplayStyle;
+  position: 'bottom' | 'top' | 'middle';
+  fontSize: SubtitleFontSize;
+}
+
 interface Props {
   url: string;
   title?: string;
   segments?: TranscriptionSegment[];
+  onExportSubtitles?: (settings: SubtitleExportSettings) => void;
+  exportingSubtitles?: boolean;
+  forceHideSubtitles?: boolean;
+  onSetTrimStart?: (seconds: number) => void;
+  onSetTrimEnd?: (seconds: number) => void;
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPlayer(
-  { url, title, segments = [] },
+  { url, title, segments = [], onExportSubtitles, exportingSubtitles = false, forceHideSubtitles = false, onSetTrimStart, onSetTrimEnd },
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -118,7 +129,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
         />
 
         {/* Subtitle overlay */}
-        {hasSegments && subsOn && (
+        {hasSegments && subsOn && !forceHideSubtitles && (
           <SubtitleOverlay
             segments={segments}
             currentTime={currentTime}
@@ -157,6 +168,30 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
             {formatDuration(duration)}
           </span>
         </div>
+
+        {/* Trim IN / OUT markers */}
+        {(onSetTrimStart || onSetTrimEnd) && (
+          <div className="flex items-center gap-1">
+            {onSetTrimStart && (
+              <button
+                onClick={() => onSetTrimStart(currentTime)}
+                title={`Marcar inicio (${formatDuration(currentTime)})`}
+                className="p-1.5 rounded-lg bg-zinc-800 hover:bg-blue-600/40 text-zinc-400 hover:text-blue-300 transition-colors"
+              >
+                <ArrowRightToLine className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {onSetTrimEnd && (
+              <button
+                onClick={() => onSetTrimEnd(currentTime)}
+                title={`Marcar fin (${formatDuration(currentTime)})`}
+                className="p-1.5 rounded-lg bg-zinc-800 hover:bg-blue-600/40 text-zinc-400 hover:text-blue-300 transition-colors"
+              >
+                <ArrowLeftToLine className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
 
         <button
           onClick={toggleMute}
@@ -258,6 +293,26 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(function VideoPl
                     ))}
                   </div>
                 </div>
+
+                {/* Burn subtitles quick action */}
+                {onExportSubtitles && subsOn && (
+                  <>
+                    <div className="h-px bg-zinc-800" />
+                    <button
+                      onClick={() => {
+                        onExportSubtitles({ style: subStyle, position: subPosition, fontSize: subFontSize });
+                        setShowStylePicker(false);
+                      }}
+                      disabled={exportingSubtitles}
+                      className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {exportingSubtitles
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Exportando...</>
+                        : <><Download className="w-3.5 h-3.5" />Quemar subtítulos</>
+                      }
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -75,6 +75,13 @@ async function executeSingleOperation(
   op: FFmpegOperation,
   outputPath: string
 ): Promise<void> {
+  // Pre-processing before building the FFmpeg command
+  let tmpFontPath: string | undefined;
+  if (op.command_type === 'subtitle') {
+    tmpFontPath = '/tmp/vis_subtitle_font.ttf';
+    await fs.copyFile(BUNDLED_FONT, tmpFontPath);
+  }
+
   return new Promise((resolve, reject) => {
     let cmd = getFFmpeg()(inputPath);
 
@@ -180,21 +187,39 @@ async function executeSingleOperation(
 
       case 'subtitle': {
         // Use drawtext filter — works without libass/fontconfig on any FFmpeg build
-        const { segments = [], style = 'capcut', position = 'bottom', fontsize = 'md' } = op.parameters as {
+        const {
+          segments = [],
+          style = 'capcut',
+          position = 'bottom',
+          fontsize = 'md',
+          trimOffset = 0,
+        } = op.parameters as {
           segments?: Array<{ start: number; end: number; text: string; words?: Array<{ word: string; start: number; end: number }> }>;
           style?: string;
           position?: string;
           fontsize?: string;
+          trimOffset?: number;
         };
 
         if (segments.length === 0) {
           // No transcription — just copy
           cmd = cmd.outputOptions(['-c copy']);
         } else {
-          const dtFilters = buildDrawtextFilters(segments, style, position, fontsize);
-          cmd = cmd
-            .videoFilters(dtFilters)
-            .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+          // Apply trim offset: if video was trimmed first, adjust timestamps
+          const adjustedSegments = (trimOffset !== 0)
+            ? segments
+                .map((s) => ({ ...s, start: s.start + trimOffset, end: s.end + trimOffset }))
+                .filter((s) => s.end > 0 && s.start < 1e9)
+            : segments;
+
+          const dtFilters = buildDrawtextFilters(adjustedSegments, style, position, fontsize, tmpFontPath ?? BUNDLED_FONT);
+          if (dtFilters.length === 0) {
+            cmd = cmd.outputOptions(['-c copy']);
+          } else {
+            cmd = cmd
+              .videoFilters(dtFilters)
+              .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
+          }
         }
         break;
       }
@@ -288,7 +313,7 @@ function yForPosition(position: string): string {
   return 'h-text_h-70'; // bottom (default)
 }
 
-/** Build a single drawtext filter string for one word/phrase at a given time range. */
+/** Build a single drawtext filter string for one segment/phrase at a given time range. */
 function makeDrawtext(
   text: string,
   start: number,
@@ -298,7 +323,8 @@ function makeDrawtext(
   position = 'bottom',
   fontsizeScale = 1.0
 ): string {
-  const enable = `between(t\\,${start.toFixed(3)}\\,${end.toFixed(3)})`;
+  // Commas inside single-quoted FFmpeg option values must NOT be escaped
+  const enable = `between(t,${start.toFixed(3)},${end.toFixed(3)})`;
   const scaledSize = Math.round(dt.fontsize * fontsizeScale);
   const parts = [
     `fontfile='${escapedFont}'`,
@@ -320,51 +346,25 @@ function makeDrawtext(
 
 /**
  * Build an array of drawtext filters for burning subtitles into video.
- *
- * - Style "capcut": renders one word at a time using word-level timestamps.
- *   Falls back to proportional distribution when word data is unavailable.
- * - All other styles: one filter per segment (existing behavior).
+ * One filter per segment — segment-level rendering for all styles.
+ * (Word-by-word creates hundreds of filters that overwhelm FFmpeg's filter graph.)
  */
 function buildDrawtextFilters(
   segments: SegmentWithWords[],
   styleId: string,
   position = 'bottom',
-  fontsizeId = 'md'
+  fontsizeId = 'md',
+  fontPath = BUNDLED_FONT
 ): string[] {
   const s = getSubtitleStyle(styleId);
   const dt = s.dt;
-  const escapedFont = BUNDLED_FONT.replace(/\\/g, '/').replace(/:/g, '\\:');
+  // Escape only colons — spaces are handled correctly inside FFmpeg filter values
+  const escapedFont = fontPath.replace(/\\/g, '/').replace(/:/g, '\\:');
   const scale = FONTSIZE_SCALES[fontsizeId] ?? 1.0;
 
-  if (styleId === 'capcut') {
-    // Word-by-word rendering
-    const filters: string[] = [];
-    for (const seg of segments) {
-      if (seg.words && seg.words.length > 0) {
-        for (const w of seg.words) {
-          if (w.word.trim()) {
-            filters.push(makeDrawtext(w.word, w.start, w.end, escapedFont, dt, position, scale));
-          }
-        }
-      } else {
-        // Proportional fallback
-        const words = seg.text.trim().split(/\s+/).filter(Boolean);
-        const dur = Math.max(0.01, seg.end - seg.start);
-        const wDur = dur / words.length;
-        words.forEach((word, i) => {
-          const wStart = seg.start + i * wDur;
-          const wEnd = wStart + wDur;
-          filters.push(makeDrawtext(word, wStart, wEnd, escapedFont, dt, position, scale));
-        });
-      }
-    }
-    return filters;
-  }
-
-  // Segment-level rendering for all other styles
-  return segments.map((seg) =>
-    makeDrawtext(seg.text, seg.start, seg.end, escapedFont, dt, position, scale)
-  );
+  return segments
+    .filter((seg) => seg.text.trim().length > 0 && seg.end > seg.start)
+    .map((seg) => makeDrawtext(seg.text.trim(), seg.start, seg.end, escapedFont, dt, position, scale));
 }
 
 /**

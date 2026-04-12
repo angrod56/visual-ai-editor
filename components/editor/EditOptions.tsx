@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Sparkles, FileVideo, Zap, VolumeX, Type, Scissors, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -64,6 +64,8 @@ interface Props {
   projectId: string;
   projectReady: boolean;
   onOperationStarted: (id: string) => void;
+  externalTrimStart?: number | null;
+  externalTrimEnd?: number | null;
 }
 
 /** Parse MM:SS or M:SS into seconds */
@@ -74,8 +76,28 @@ function parseTime(val: string): number {
   return 0;
 }
 
-export function EditOptions({ projectId, projectReady, onOperationStarted }: Props) {
+/** Convert seconds to M:SS string */
+function secondsToMMSS(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+export function EditOptions({ projectId, projectReady, onOperationStarted, externalTrimStart, externalTrimEnd }: Props) {
   const [ops, setOps] = useState<SelectedOps>(DEFAULT_OPS);
+
+  // Auto-fill trim fields when player sets in/out markers
+  useEffect(() => {
+    if (externalTrimStart != null) {
+      setOps((p) => ({ ...p, trim: true, trimStart: secondsToMMSS(externalTrimStart) }));
+    }
+  }, [externalTrimStart]);
+
+  useEffect(() => {
+    if (externalTrimEnd != null) {
+      setOps((p) => ({ ...p, trim: true, trimEnd: secondsToMMSS(externalTrimEnd) }));
+    }
+  }, [externalTrimEnd]);
   const [customInstruction, setCustomInstruction] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
