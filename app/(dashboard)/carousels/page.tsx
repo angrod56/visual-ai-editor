@@ -53,6 +53,13 @@ export default function CarouselsPage() {
   const [ctaText, setCtaText]       = useState('');
   const [ctaComplement, setCtaComplement] = useState('');
 
+  // — copy review step
+  type CopySlide = { id: number; type: string; number?: string; headline: string; body: string; emoji: string; highlight?: string; copy_reason?: string; canva_note?: string };
+  type CopyDraft = { title: string; subtitle?: string; carousel_type: string; brand: string; coherence: { score: number; notes: string }; slides: CopySlide[] };
+  const [generatingCopy, setGeneratingCopy] = useState(false);
+  const [copyDraft, setCopyDraft]           = useState<CopyDraft | null>(null);
+  const [copyPayload, setCopyPayload]       = useState<Record<string, unknown> | null>(null); // saved to reuse on regenerate
+
   // — canva guide
   const [canvaGuide, setCanvaGuide]     = useState<Array<{ id: number; type: string; headline: string; body: string; emoji: string; canva_note?: string }>>([]);
   const [showCanvaGuide, setShowCanvaGuide] = useState(false);
@@ -235,22 +242,105 @@ export default function CarouselsPage() {
     });
   };
 
-  // ── Generate ───────────────────────────────────────────────────────────
-  const generate = async () => {
-    if (sourceMode === 'manual' && !topic.trim()) { toast.error('Escribe el tema del carrusel'); return; }
-    if (sourceMode === 'video' && !selectedProject) { toast.error('Selecciona un video'); return; }
+  // ── Build shared payload ───────────────────────────────────────────────
+  const buildPayload = (): Record<string, unknown> | null => {
+    if (sourceMode === 'manual' && !topic.trim()) { toast.error('Escribe el tema del carrusel'); return null; }
+    if (sourceMode === 'video' && !selectedProject) { toast.error('Selecciona un video'); return null; }
 
-    // Build payload
-    let payload: Record<string, unknown> = { niche, audience, platform, slideCount, carouselType, brand, ctaText: ctaText.trim() || undefined, ctaComplement: ctaComplement.trim() || undefined };
+    const base: Record<string, unknown> = { niche, audience, platform, slideCount, carouselType, brand, ctaText: ctaText.trim() || undefined, ctaComplement: ctaComplement.trim() || undefined };
 
     if (sourceMode === 'video' && selectedProject) {
       const segs = selectedProject.transcription_segments ?? [];
       const transcription = segs.map((s) => s.text).join(' ').trim();
-      if (!transcription) { toast.error('Este video no tiene transcripción'); return; }
-      payload = { ...payload, topic: topic.trim() || selectedProject.title, transcription };
-    } else {
-      payload = { ...payload, topic };
+      if (!transcription) { toast.error('Este video no tiene transcripción'); return null; }
+      return { ...base, topic: topic.trim() || selectedProject.title, transcription };
     }
+    return { ...base, topic };
+  };
+
+  // ── Step 1: Generate copy for review ──────────────────────────────────
+  const generateCopy = async () => {
+    const payload = buildPayload();
+    if (!payload) return;
+    setCopyPayload(payload);
+    setGeneratingCopy(true);
+    setCopyDraft(null);
+    try {
+      const res = await fetch('/api/carousels/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al generar el copy'); return; }
+      setCopyDraft(data as CopyDraft);
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setGeneratingCopy(false);
+    }
+  };
+
+  // ── Step 1b: Regenerate copy ───────────────────────────────────────────
+  const regenerateCopy = async () => {
+    if (!copyPayload) return;
+    setGeneratingCopy(true);
+    setCopyDraft(null);
+    try {
+      const res = await fetch('/api/carousels/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(copyPayload),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al regenerar'); return; }
+      setCopyDraft(data as CopyDraft);
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setGeneratingCopy(false);
+    }
+  };
+
+  // ── Step 2: Accept copy → generate visual slides ───────────────────────
+  const acceptCopy = async () => {
+    if (!copyDraft) return;
+    setGenerating(true);
+    setSlides([]);
+    setCanvaGuide([]);
+    setShowCanvaGuide(false);
+    try {
+      // Pass the approved copy directly to the generate endpoint
+      const res = await fetch('/api/carousels/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...(copyPayload ?? {}), approvedCopy: copyDraft.slides }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Error al crear el diseño'); return; }
+      const generated: CarouselSlide[] = data.slides ?? [];
+      thumbRefs.current = new Array(generated.length).fill(null);
+      setSlides(generated);
+      setCanvaGuide(data.slides ?? []);
+      setCarouselTitle(data.title ?? copyDraft.title);
+      setActiveIdx(0);
+      setBgSlides(new Set());
+      setOpenSlides(new Set([0, generated.length - 1]));
+      setSavedId(null);
+      setCopyDraft(null);
+      setMode('editor');
+      toast.success(`${generated.length} diapositivas creadas`);
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // ── Generate (direct, used by strategy flow) ──────────────────────────
+  const generate = async (overridePayload?: Record<string, unknown>) => {
+    const payload = overridePayload ?? buildPayload();
+    if (!payload) return;
 
     setGenerating(true);
     setSlides([]);
@@ -289,45 +379,18 @@ export default function CarouselsPage() {
     setTopic(item.topic);
     setCarouselType('promocional');
     setCtaText(item.cta_idea);
-    // Small delay so state updates render before auto-generating
     await new Promise((r) => setTimeout(r, 80));
-    setGenerating(true);
-    setSlides([]);
-    setCanvaGuide([]);
-    try {
-      const res = await fetch('/api/carousels/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: item.topic,
-          niche,
-          audience,
-          platform,
-          slideCount,
-          carouselType: 'promocional',
-          brand,
-          ctaText: item.cta_idea,
-          ctaComplement: ctaComplement.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? 'Error al generar'); return; }
-      const generated: CarouselSlide[] = data.slides ?? [];
-      thumbRefs.current = new Array(generated.length).fill(null);
-      setSlides(generated);
-      setCanvaGuide(data.slides ?? []);
-      setCarouselTitle(data.title ?? item.topic);
-      setActiveIdx(0);
-      setBgSlides(new Set());
-      setOpenSlides(new Set([0, generated.length - 1]));
-      setSavedId(null);
-      setMode('editor');
-      toast.success(`Carrusel "${item.stage}" generado`);
-    } catch {
-      toast.error('Error de conexión');
-    } finally {
-      setGenerating(false);
-    }
+    await generate({
+      topic: item.topic,
+      niche,
+      audience,
+      platform,
+      slideCount,
+      carouselType: 'promocional',
+      brand,
+      ctaText: item.cta_idea,
+      ctaComplement: ctaComplement.trim() || undefined,
+    });
   };
 
   // ── Edit ──────────────────────────────────────────────────────────────
@@ -660,13 +723,13 @@ export default function CarouselsPage() {
             <ThemeSelector themeKey={themeKey} onChange={setThemeKey} />
 
             <Button
-              onClick={generate}
-              disabled={generating || (sourceMode === 'manual' ? !topic.trim() : !selectedProject)}
+              onClick={generateCopy}
+              disabled={generatingCopy || generating || (sourceMode === 'manual' ? !topic.trim() : !selectedProject)}
               className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-black font-semibold gap-2 h-11"
             >
-              {generating
-                ? <><Loader2 className="w-5 h-5 animate-spin" />Generando carrusel…</>
-                : <><Sparkles className="w-5 h-5" />Generar carrusel con IA</>}
+              {generatingCopy
+                ? <><Loader2 className="w-5 h-5 animate-spin" />Generando contenido…</>
+                : <><Sparkles className="w-5 h-5" />Generar contenido con IA</>}
             </Button>
           </div>
 
@@ -929,6 +992,17 @@ export default function CarouselsPage() {
         </div>
       </div>
 
+      {/* ── Copy review panel ─────────────────────────────────── */}
+      {mode === 'form' && (generatingCopy || copyDraft) && !generating && (
+        <CopyReview
+          draft={copyDraft}
+          loading={generatingCopy}
+          onAccept={acceptCopy}
+          onRegenerate={regenerateCopy}
+          accepting={generating}
+        />
+      )}
+
       {/* ── History ─────────────────────────────────────────────── */}
       <div className="space-y-4 border-t border-zinc-800 pt-8">
         <div className="flex items-center gap-2">
@@ -1157,6 +1231,140 @@ function ThemeSelector({ themeKey, onChange }: { themeKey: string; onChange: (k:
             )}
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── CopyReview component ───────────────────────────────────────────────────
+
+type CopySlide = { id: number; type: string; number?: string; headline: string; body: string; emoji: string; highlight?: string; copy_reason?: string; canva_note?: string };
+type CopyDraft = { title: string; subtitle?: string; coherence: { score: number; notes: string }; slides: CopySlide[] };
+
+function CopyReview({
+  draft,
+  loading,
+  onAccept,
+  onRegenerate,
+  accepting,
+}: {
+  draft: CopyDraft | null;
+  loading: boolean;
+  onAccept: () => void;
+  onRegenerate: () => void;
+  accepting: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-semibold text-white">El agente de copywriting está trabajando…</p>
+          <p className="text-xs text-zinc-500">Analizando el tema, construyendo el arco narrativo y redactando el copy para cada slide</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!draft) return null;
+
+  const scoreColor = draft.coherence.score >= 8 ? 'text-green-400' : draft.coherence.score >= 6 ? 'text-amber-400' : 'text-red-400';
+  const scoreBg    = draft.coherence.score >= 8 ? 'bg-green-500/10 border-green-500/30' : draft.coherence.score >= 6 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-red-500/10 border-red-500/30';
+
+  return (
+    <div className="space-y-5 rounded-2xl border border-zinc-700 bg-zinc-900/40 p-6">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <p className="text-sm font-bold text-white">Revisión de copy</p>
+            <span className="text-xs text-zinc-500">{draft.slides.length} slides</span>
+          </div>
+          <p className="text-xs text-zinc-400 font-semibold">{draft.title}</p>
+          {draft.subtitle && <p className="text-xs text-zinc-600 italic">{draft.subtitle}</p>}
+        </div>
+
+        {/* Coherence score */}
+        <div className={cn('shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border', scoreBg)}>
+          <div className="text-center">
+            <p className={cn('text-xl font-black leading-none', scoreColor)}>{draft.coherence.score}<span className="text-xs font-normal text-zinc-500">/10</span></p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">coherencia</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Coherence notes */}
+      <div className={cn('p-3 rounded-xl border text-xs leading-relaxed', scoreBg, scoreColor === 'text-green-400' ? 'text-green-300' : scoreColor === 'text-amber-400' ? 'text-amber-300' : 'text-red-300')}>
+        {draft.coherence.notes}
+      </div>
+
+      {/* Slides */}
+      <div className="space-y-3">
+        {draft.slides.map((s, i) => (
+          <div
+            key={i}
+            className={cn('rounded-xl border p-4 space-y-2', {
+              'bg-amber-500/5 border-amber-500/20': s.type === 'cover',
+              'bg-zinc-800/40 border-zinc-700/60': s.type === 'content',
+              'bg-green-500/5 border-green-500/20': s.type === 'cta',
+            })}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg leading-none">{s.emoji}</span>
+              <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide', {
+                'bg-amber-500/20 text-amber-300': s.type === 'cover',
+                'bg-zinc-700 text-zinc-300': s.type === 'content',
+                'bg-green-500/20 text-green-300': s.type === 'cta',
+              })}>
+                {s.type === 'cover' ? 'Portada' : s.type === 'cta' ? 'CTA' : `Slide ${s.number ?? i}`}
+              </span>
+              {s.highlight && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">
+                  highlight: {s.highlight}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-bold text-white leading-snug">{s.headline}</p>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{s.body}</p>
+            </div>
+
+            {s.copy_reason && (
+              <div className="flex items-start gap-2 pt-1 border-t border-zinc-700/40">
+                <span className="text-[10px] text-amber-400 font-semibold shrink-0 mt-0.5">¿Por qué funciona?</span>
+                <p className="text-[11px] text-zinc-500 leading-relaxed italic">{s.copy_reason}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 pt-2">
+        <Button
+          onClick={onRegenerate}
+          disabled={loading || accepting}
+          variant="ghost"
+          className="flex-1 border border-zinc-700 hover:border-zinc-500 text-zinc-300 gap-2 h-11"
+        >
+          <Loader2 className={cn('w-4 h-4', loading ? 'animate-spin' : 'hidden')} />
+          Regenerar contenido
+        </Button>
+        <Button
+          onClick={onAccept}
+          disabled={accepting || loading}
+          className="flex-1 bg-amber-500 hover:bg-amber-600 text-black font-bold gap-2 h-11"
+        >
+          {accepting
+            ? <><Loader2 className="w-4 h-4 animate-spin" />Creando diseño…</>
+            : <><Sparkles className="w-4 h-4" />Aceptar y crear diseño</>
+          }
+        </Button>
       </div>
     </div>
   );

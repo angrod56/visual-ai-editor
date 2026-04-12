@@ -66,7 +66,13 @@ export async function POST(request: NextRequest) {
     ctaText,
     ctaComplement,
     transcription,
+    approvedCopy, // when set, skip generation and use this copy directly
   } = await request.json();
+
+  // ── Fast path: approved copy from review step ──
+  if (approvedCopy && Array.isArray(approvedCopy)) {
+    return NextResponse.json({ title: topic || 'Carrusel', slides: approvedCopy });
+  }
 
   if (!topic && !transcription) return NextResponse.json({ error: 'topic o transcription es requerido' }, { status: 400 });
 
