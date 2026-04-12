@@ -65,31 +65,30 @@ export async function POST(
   const storedCommands = (operation.ffmpeg_commands ?? {}) as Record<string, unknown>;
   const isDirectMode = storedCommands.mode === 'direct';
 
+  // Helper: push a progress step visible to the client via Realtime
+  const setStep = (step: string) =>
+    supabase
+      .from('edit_operations')
+      .update({ ai_interpretation: { _progress: step } })
+      .eq('id', operationId)
+      .then(() => {});
+
   try {
     let ffmpegOperations: FFmpegOperation[];
     let exportType: ReturnType<typeof mapOperationTypeToExportType> = 'clip';
     let estimatedDuration: number | null = null;
     let aiInterpretation: Record<string, unknown> = {};
 
-    // Download video to /tmp
-    const tmpInputPath = path.join('/tmp', `${operation.project_id}_input.mp4`);
-    const tmpOutputDir = path.join('/tmp', operationId);
-    const videoBuffer = await downloadToBuffer(typedProject.storage_path);
-    await fs.writeFile(tmpInputPath, videoBuffer);
-    await fs.mkdir(tmpOutputDir, { recursive: true });
-
     if (isDirectMode) {
-      // ── Direct mode: use pre-built plan, inject real transcription segments ──
+      await setStep('Preparando edición...');
       const directOptions = storedCommands.direct_options as DirectEditOptions;
       const subtitleStyle = storedCommands.subtitle_style as string ?? 'clasico';
 
-      // Rebuild plan with real segments (silence_remove needs them)
       ffmpegOperations = buildDirectPlan(
         { ...directOptions, subtitleStyle },
         transcription.segments
       );
 
-      // Inject segments into subtitle operations (uses drawtext, no libass needed)
       const subOps = ffmpegOperations.filter((op) => op.command_type === 'subtitle');
       if (subOps.length > 0 && transcription.segments.length > 0) {
         subOps.forEach((op) => {
@@ -98,7 +97,6 @@ export async function POST(
         });
       }
 
-      // Determine export type from selected ops
       if (directOptions.subtitles && directOptions.verticalCrop) exportType = 'reel';
       else if (directOptions.subtitles) exportType = 'subtitled';
       else if (directOptions.verticalCrop) exportType = 'resized';
@@ -108,7 +106,7 @@ export async function POST(
       aiInterpretation = { mode: 'direct', options: directOptions };
 
     } else {
-      // ── Claude mode: interpret natural language instruction ──
+      await setStep('Interpretando instrucción con IA...');
       const editPlan = await interpretInstruction(operation.instruction, {
         duration: typedProject.duration_seconds ?? 0,
         transcription,
@@ -130,7 +128,6 @@ export async function POST(
       estimatedDuration = editPlan.estimated_output.duration_seconds ?? null;
       aiInterpretation = editPlan as unknown as Record<string, unknown>;
 
-      // Inject segments into subtitle operations (uses drawtext, no libass needed)
       const subOps = ffmpegOperations.filter((op) => op.command_type === 'subtitle');
       if (subOps.length > 0 && transcription.segments.length > 0) {
         const claudeStyle = storedCommands.subtitle_style as string ?? 'clasico';
@@ -145,7 +142,16 @@ export async function POST(
       throw new Error('No se generaron operaciones FFmpeg para ejecutar');
     }
 
+    // Download video to /tmp
+    await setStep('Descargando video...');
+    const tmpInputPath = path.join('/tmp', `${operation.project_id}_input.mp4`);
+    const tmpOutputDir = path.join('/tmp', operationId);
+    const videoBuffer = await downloadToBuffer(typedProject.storage_path);
+    await fs.writeFile(tmpInputPath, videoBuffer);
+    await fs.mkdir(tmpOutputDir, { recursive: true });
+
     // Execute FFmpeg pipeline
+    await setStep('Ejecutando edición con FFmpeg...');
     const result = await executeEditPlan(tmpInputPath, ffmpegOperations, tmpOutputDir);
 
     if (!result.success || !result.outputPath) {
@@ -153,6 +159,7 @@ export async function POST(
     }
 
     // Upload result to R2
+    await setStep('Subiendo resultado...');
     const isAudio = /\.(mp3|aac|wav)$/.test(result.outputPath);
     const outputExt = isAudio ? result.outputPath.split('.').pop()! : 'mp4';
     const outputKey = isAudio
