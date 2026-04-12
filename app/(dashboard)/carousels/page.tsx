@@ -51,6 +51,7 @@ export default function CarouselsPage() {
   const [brand, setBrand]           = useState<BrandKey>('mentoriasangel');
   const [slideCount, setSlideCount] = useState(7);
   const [ctaText, setCtaText]       = useState('');
+  const [ctaComplement, setCtaComplement] = useState('');
 
   // — canva guide
   const [canvaGuide, setCanvaGuide]     = useState<Array<{ id: number; type: string; headline: string; body: string; emoji: string; canva_note?: string }>>([]);
@@ -240,7 +241,7 @@ export default function CarouselsPage() {
     if (sourceMode === 'video' && !selectedProject) { toast.error('Selecciona un video'); return; }
 
     // Build payload
-    let payload: Record<string, unknown> = { niche, audience, platform, slideCount, carouselType, brand, ctaText: ctaText.trim() || undefined };
+    let payload: Record<string, unknown> = { niche, audience, platform, slideCount, carouselType, brand, ctaText: ctaText.trim() || undefined, ctaComplement: ctaComplement.trim() || undefined };
 
     if (sourceMode === 'video' && selectedProject) {
       const segs = selectedProject.transcription_segments ?? [];
@@ -306,6 +307,7 @@ export default function CarouselsPage() {
           carouselType: 'promocional',
           brand,
           ctaText: item.cta_idea,
+          ctaComplement: ctaComplement.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -639,9 +641,16 @@ export default function CarouselsPage() {
             </div>
 
             <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Texto del botón CTA (última diapositiva)</label>
+              <label className="text-xs text-zinc-400 mb-1 block">Acción del CTA</label>
               <input value={ctaText} onChange={(e) => setCtaText(e.target.value)}
-                placeholder="ej: Escríbeme al DM, Visita el link en bio, Compra ahora…"
+                placeholder="ej: Escríbeme al DM · Visita el link en bio · Compra ahora"
+                className={FIELD} />
+            </div>
+
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Frase complementaria del CTA</label>
+              <input value={ctaComplement} onChange={(e) => setCtaComplement(e.target.value)}
+                placeholder="ej: Si quieres duplicar tus ventas en 60 días sin invertir más en ads"
                 className={FIELD} />
             </div>
 

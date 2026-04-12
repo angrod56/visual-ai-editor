@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     carouselType = 'educativo',
     brand = 'generico',
     ctaText,
+    ctaComplement,
     transcription,
   } = await request.json();
 
@@ -130,7 +131,8 @@ REGLAS DE COPYWRITING (SKILL MDC)
 
 PROHIBIDO: "mejora tu vida", "alcanza el éxito", "sé mejor". Cada frase debe ser tan específica que la audiencia piense "esto es exactamente lo que me pasa".
 
-${ctaText ? `CTA OBLIGATORIO: El campo "body" de la última slide DEBE ser exactamente: "${ctaText}"` : ''}
+${ctaText ? `CTA — ACCIÓN OBLIGATORIA: El campo "body" de la última slide DEBE ser exactamente: "${ctaText}"` : ''}
+${ctaComplement ? `CTA — FRASE COMPLEMENTARIA: El headline de la última slide DEBE incorporar o basarse en esta frase: "${ctaComplement}"` : ''}
 
 PRUEBA ANTES DE RESPONDER: Lee los headlines en orden. ¿Alguien de la audiencia siente que (1) lo entienden, (2) tienen la solución, y (3) quiere seguir leyendo? Si no, reescribe.
 
