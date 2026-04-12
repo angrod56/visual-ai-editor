@@ -5,12 +5,21 @@ import { TranscriptionSegment, TranscriptionWord } from '@/types';
 import { cn } from '@/lib/utils';
 
 export type SubtitleDisplayStyle = 'capcut' | 'filled' | 'karaoke' | 'minimal';
+export type SubtitleFontSize = 'sm' | 'md' | 'lg' | 'xl';
+
+const FONT_SIZE_MAP: Record<SubtitleFontSize, string> = {
+  sm: 'clamp(10px, 2.3vw, 15px)',
+  md: 'clamp(13px, 3.2vw, 22px)',
+  lg: 'clamp(17px, 4.3vw, 29px)',
+  xl: 'clamp(22px, 5.5vw, 38px)',
+};
 
 interface Props {
   segments: TranscriptionSegment[];
   currentTime: number;
   style?: SubtitleDisplayStyle;
   position?: 'bottom' | 'top' | 'middle';
+  fontSize?: SubtitleFontSize;
 }
 
 function getActiveSegment(segments: TranscriptionSegment[], t: number) {
@@ -164,6 +173,7 @@ export function SubtitleOverlay({
   currentTime,
   style = 'capcut',
   position = 'bottom',
+  fontSize = 'md',
 }: Props) {
   const active = useMemo(
     () => getActiveSegment(segments, currentTime),
@@ -192,7 +202,7 @@ export function SubtitleOverlay({
         'absolute left-0 right-0 px-[6%] flex justify-center pointer-events-none z-10 animate-subtitle-pop',
         posClass
       )}
-      style={{ fontSize: 'clamp(13px, 3.2vw, 22px)' }}
+      style={{ fontSize: FONT_SIZE_MAP[fontSize] }}
     >
       {style === 'capcut' && <CapcutWords words={words} activeIdx={activeWordIdx} />}
       {style === 'filled' && <FilledWords words={words} activeIdx={activeWordIdx} />}

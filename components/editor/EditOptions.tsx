@@ -17,9 +17,24 @@ const SPEED_OPTIONS = [
   { label: '2x', value: 2.0 },
 ];
 
+const SUBTITLE_POSITIONS = [
+  { id: 'bottom', label: 'Abajo',  icon: '⬇' },
+  { id: 'center', label: 'Centro', icon: '↕' },
+  { id: 'top',    label: 'Arriba', icon: '⬆' },
+] as const;
+
+const SUBTITLE_FONT_SIZES = [
+  { id: 'sm', label: 'S' },
+  { id: 'md', label: 'M' },
+  { id: 'lg', label: 'L' },
+  { id: 'xl', label: 'XL' },
+] as const;
+
 interface SelectedOps {
   subtitles: boolean;
   subtitleStyle: string;
+  subtitlePosition: 'bottom' | 'center' | 'top';
+  subtitleFontSize: 'sm' | 'md' | 'lg' | 'xl';
   speed: boolean;
   speedFactor: number;
   verticalCrop: boolean;
@@ -33,6 +48,8 @@ interface SelectedOps {
 const DEFAULT_OPS: SelectedOps = {
   subtitles: false,
   subtitleStyle: 'capcut',
+  subtitlePosition: 'bottom',
+  subtitleFontSize: 'md',
   speed: false,
   speedFactor: 1.5,
   verticalCrop: false,
@@ -104,10 +121,14 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
           trimStart: ops.trim ? parseTime(ops.trimStart) : undefined,
           trimEnd: ops.trim && ops.trimEnd ? parseTime(ops.trimEnd) : undefined,
         };
+        body.subtitle_position = ops.subtitlePosition;
+        body.subtitle_fontsize = ops.subtitleFontSize;
         if (customInstruction.trim()) body.instruction = customInstruction.trim();
       } else {
         body.instruction = customInstruction.trim();
         body.subtitle_style = ops.subtitleStyle;
+        body.subtitle_position = ops.subtitlePosition;
+        body.subtitle_fontsize = ops.subtitleFontSize;
       }
 
       const res = await fetch('/api/edit', {
@@ -242,26 +263,72 @@ export function EditOptions({ projectId, projectReady, onOperationStarted }: Pro
         </div>
       )}
 
-      {/* Subtitle style */}
+      {/* Subtitle style + position + size */}
       {ops.subtitles && (
-        <div className="space-y-2 p-3 bg-zinc-800/60 rounded-xl border border-zinc-700">
-          <p className="text-xs font-medium text-zinc-400">Estilo de subtítulos</p>
-          <div className="flex flex-wrap gap-2">
-            {SUBTITLE_STYLES.map((style) => (
-              <button
-                key={style.id}
-                onClick={() => set({ subtitleStyle: style.id })}
-                className={cn(
-                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[60px]',
-                  ops.subtitleStyle === style.id
-                    ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
-                    : `${style.preview.bg} ${style.preview.border} hover:border-zinc-500`
-                )}
-              >
-                <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
-                <span className="text-[10px] text-zinc-400">{style.label}</span>
-              </button>
-            ))}
+        <div className="space-y-3 p-3 bg-zinc-800/60 rounded-xl border border-zinc-700">
+          {/* Style */}
+          <div>
+            <p className="text-xs font-medium text-zinc-400 mb-2">Estilo</p>
+            <div className="flex flex-wrap gap-2">
+              {SUBTITLE_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => set({ subtitleStyle: style.id })}
+                  className={cn(
+                    'flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all min-w-[60px]',
+                    ops.subtitleStyle === style.id
+                      ? 'border-amber-500 bg-amber-500/20 ring-1 ring-amber-500'
+                      : `${style.preview.bg} ${style.preview.border} hover:border-zinc-500`
+                  )}
+                >
+                  <span className={cn('text-base font-bold leading-none', style.preview.textColor)}>Aa</span>
+                  <span className="text-[10px] text-zinc-400">{style.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Position + Size in one row */}
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-zinc-400 mb-1.5">Posición</p>
+              <div className="flex gap-1.5">
+                {SUBTITLE_POSITIONS.map((pos) => (
+                  <button
+                    key={pos.id}
+                    onClick={() => set({ subtitlePosition: pos.id })}
+                    title={pos.label}
+                    className={cn(
+                      'flex-1 py-1.5 rounded-lg border text-sm transition-all',
+                      ops.subtitlePosition === pos.id
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-300'
+                        : 'border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-500 hover:text-white'
+                    )}
+                  >
+                    {pos.icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-medium text-zinc-400 mb-1.5">Tamaño</p>
+              <div className="flex gap-1.5">
+                {SUBTITLE_FONT_SIZES.map((sz) => (
+                  <button
+                    key={sz.id}
+                    onClick={() => set({ subtitleFontSize: sz.id })}
+                    className={cn(
+                      'flex-1 py-1.5 rounded-lg border text-xs font-bold transition-all',
+                      ops.subtitleFontSize === sz.id
+                        ? 'border-amber-500 bg-amber-500/20 text-amber-300'
+                        : 'border-zinc-700 bg-zinc-800 text-zinc-500 hover:border-zinc-500 hover:text-white'
+                    )}
+                  >
+                    {sz.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

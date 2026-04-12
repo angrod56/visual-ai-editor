@@ -79,10 +79,13 @@ export async function POST(
     let estimatedDuration: number | null = null;
     let aiInterpretation: Record<string, unknown> = {};
 
-    if (isDirectMode) {
+    const subtitlePosition = storedCommands.subtitle_position as string ?? 'bottom';
+  const subtitleFontSize = storedCommands.subtitle_fontsize as string ?? 'md';
+
+  if (isDirectMode) {
       await setStep('Preparando edición...');
       const directOptions = storedCommands.direct_options as DirectEditOptions;
-      const subtitleStyle = storedCommands.subtitle_style as string ?? 'clasico';
+      const subtitleStyle = storedCommands.subtitle_style as string ?? 'capcut';
 
       ffmpegOperations = buildDirectPlan(
         { ...directOptions, subtitleStyle },
@@ -94,6 +97,8 @@ export async function POST(
         subOps.forEach((op) => {
           (op.parameters as Record<string, unknown>).segments = transcription.segments;
           (op.parameters as Record<string, unknown>).style = subtitleStyle;
+          (op.parameters as Record<string, unknown>).position = subtitlePosition;
+          (op.parameters as Record<string, unknown>).fontsize = subtitleFontSize;
         });
       }
 
@@ -130,10 +135,11 @@ export async function POST(
 
       const subOps = ffmpegOperations.filter((op) => op.command_type === 'subtitle');
       if (subOps.length > 0 && transcription.segments.length > 0) {
-        const claudeStyle = storedCommands.subtitle_style as string ?? 'clasico';
         subOps.forEach((op) => {
           (op.parameters as Record<string, unknown>).segments = transcription.segments;
-          (op.parameters as Record<string, unknown>).style = claudeStyle;
+          (op.parameters as Record<string, unknown>).style = storedCommands.subtitle_style as string ?? 'capcut';
+          (op.parameters as Record<string, unknown>).position = subtitlePosition;
+          (op.parameters as Record<string, unknown>).fontsize = subtitleFontSize;
         });
       }
     }

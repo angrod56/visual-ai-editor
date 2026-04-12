@@ -11,10 +11,12 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const body = await request.json();
-  const { project_id, instruction, subtitle_style, direct_options } = body as {
+  const { project_id, instruction, subtitle_style, subtitle_position, subtitle_fontsize, direct_options } = body as {
     project_id: string;
     instruction?: string;
     subtitle_style?: string;
+    subtitle_position?: string;
+    subtitle_fontsize?: string;
     direct_options?: DirectEditOptions;
   };
 
@@ -54,10 +56,16 @@ export async function POST(request: NextRequest) {
       mode: 'direct',
       preset_operations: plan,
       direct_options,
-      subtitle_style: direct_options.subtitleStyle ?? subtitle_style ?? 'clasico',
+      subtitle_style: direct_options.subtitleStyle ?? subtitle_style ?? 'capcut',
+      subtitle_position: subtitle_position ?? 'bottom',
+      subtitle_fontsize: subtitle_fontsize ?? 'md',
     };
-  } else if (subtitle_style) {
-    ffmpegCommands = { subtitle_style };
+  } else if (subtitle_style || instruction) {
+    ffmpegCommands = {
+      subtitle_style: subtitle_style ?? 'capcut',
+      subtitle_position: subtitle_position ?? 'bottom',
+      subtitle_fontsize: subtitle_fontsize ?? 'md',
+    };
   }
 
   const { data: operation, error: opError } = await supabase

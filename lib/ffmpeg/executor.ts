@@ -180,16 +180,18 @@ async function executeSingleOperation(
 
       case 'subtitle': {
         // Use drawtext filter — works without libass/fontconfig on any FFmpeg build
-        const { segments = [], style = 'clasico' } = op.parameters as {
+        const { segments = [], style = 'capcut', position = 'bottom', fontsize = 'md' } = op.parameters as {
           segments?: Array<{ start: number; end: number; text: string; words?: Array<{ word: string; start: number; end: number }> }>;
           style?: string;
+          position?: string;
+          fontsize?: string;
         };
 
         if (segments.length === 0) {
           // No transcription — just copy
           cmd = cmd.outputOptions(['-c copy']);
         } else {
-          const dtFilters = buildDrawtextFilters(segments, style);
+          const dtFilters = buildDrawtextFilters(segments, style, position, fontsize);
           cmd = cmd
             .videoFilters(dtFilters)
             .outputOptions(['-c:a copy', '-preset ultrafast', '-crf 28']);
@@ -278,19 +280,30 @@ function escapeDrawtext(raw: string): string {
     .replace(/\n/g, ' ');
 }
 
+const FONTSIZE_SCALES: Record<string, number> = { sm: 0.72, md: 1.0, lg: 1.32, xl: 1.65 };
+
+function yForPosition(position: string): string {
+  if (position === 'top')    return 'text_h+40';
+  if (position === 'center') return '(h-text_h)/2';
+  return 'h-text_h-70'; // bottom (default)
+}
+
 /** Build a single drawtext filter string for one word/phrase at a given time range. */
 function makeDrawtext(
   text: string,
   start: number,
   end: number,
   escapedFont: string,
-  dt: { fontsize: number; fontcolor: string; borderw: number; bordercolor: string; shadowx: number; shadowy: number; shadowcolor: string; box: number; boxcolor: string }
+  dt: { fontsize: number; fontcolor: string; borderw: number; bordercolor: string; shadowx: number; shadowy: number; shadowcolor: string; box: number; boxcolor: string },
+  position = 'bottom',
+  fontsizeScale = 1.0
 ): string {
   const enable = `between(t\\,${start.toFixed(3)}\\,${end.toFixed(3)})`;
+  const scaledSize = Math.round(dt.fontsize * fontsizeScale);
   const parts = [
     `fontfile='${escapedFont}'`,
     `text='${escapeDrawtext(text)}'`,
-    `fontsize=${dt.fontsize}`,
+    `fontsize=${scaledSize}`,
     `fontcolor=${dt.fontcolor}`,
     `borderw=${dt.borderw}`,
     `bordercolor=${dt.bordercolor}`,
@@ -299,7 +312,7 @@ function makeDrawtext(
       : []),
     ...(dt.box ? [`box=1`, `boxcolor=${dt.boxcolor}`, `boxborderw=8`] : []),
     `x=(w-text_w)/2`,
-    `y=h-text_h-60`,
+    `y=${yForPosition(position)}`,
     `enable='${enable}'`,
   ];
   return `drawtext=${parts.join(':')}`;
@@ -312,31 +325,36 @@ function makeDrawtext(
  *   Falls back to proportional distribution when word data is unavailable.
  * - All other styles: one filter per segment (existing behavior).
  */
-function buildDrawtextFilters(segments: SegmentWithWords[], styleId: string): string[] {
+function buildDrawtextFilters(
+  segments: SegmentWithWords[],
+  styleId: string,
+  position = 'bottom',
+  fontsizeId = 'md'
+): string[] {
   const s = getSubtitleStyle(styleId);
   const dt = s.dt;
   const escapedFont = BUNDLED_FONT.replace(/\\/g, '/').replace(/:/g, '\\:');
+  const scale = FONTSIZE_SCALES[fontsizeId] ?? 1.0;
 
   if (styleId === 'capcut') {
     // Word-by-word rendering
     const filters: string[] = [];
     for (const seg of segments) {
       if (seg.words && seg.words.length > 0) {
-        // Exact word timestamps from Whisper
         for (const w of seg.words) {
           if (w.word.trim()) {
-            filters.push(makeDrawtext(w.word, w.start, w.end, escapedFont, dt));
+            filters.push(makeDrawtext(w.word, w.start, w.end, escapedFont, dt, position, scale));
           }
         }
       } else {
-        // Proportional fallback: distribute segment duration across words
+        // Proportional fallback
         const words = seg.text.trim().split(/\s+/).filter(Boolean);
         const dur = Math.max(0.01, seg.end - seg.start);
         const wDur = dur / words.length;
         words.forEach((word, i) => {
           const wStart = seg.start + i * wDur;
           const wEnd = wStart + wDur;
-          filters.push(makeDrawtext(word, wStart, wEnd, escapedFont, dt));
+          filters.push(makeDrawtext(word, wStart, wEnd, escapedFont, dt, position, scale));
         });
       }
     }
@@ -345,7 +363,7 @@ function buildDrawtextFilters(segments: SegmentWithWords[], styleId: string): st
 
   // Segment-level rendering for all other styles
   return segments.map((seg) =>
-    makeDrawtext(seg.text, seg.start, seg.end, escapedFont, dt)
+    makeDrawtext(seg.text, seg.start, seg.end, escapedFont, dt, position, scale)
   );
 }
 
