@@ -444,25 +444,25 @@ export default function CarouselsPage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Layout className="w-6 h-6 text-amber-400" />
+          <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0" />
             Creador de Carruseles
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Genera carruseles profesionales con IA listos para publicar en redes sociales
           </p>
         </div>
         {pageMode === 'carousel' && mode === 'editor' && (
-          <div className="flex items-center gap-2 shrink-0 mt-1">
+          <div className="flex items-center gap-2 flex-wrap">
             {canvaGuide.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => setShowCanvaGuide(true)}
                 className="gap-1.5 text-xs h-8 text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500">
                 <TableProperties className="w-3.5 h-3.5" />
-                Guión Canva
+                <span className="hidden sm:inline">Guión </span>Canva
               </Button>
             )}
             <Button size="sm" onClick={saveCarousel} disabled={saving || !slides.length}
@@ -483,30 +483,28 @@ export default function CarouselsPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
         <button
           onClick={() => setPageMode('carousel')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-            pageMode === 'carousel'
-              ? 'bg-amber-500 text-black'
-              : 'text-zinc-400 hover:text-white'
+            'flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all',
+            pageMode === 'carousel' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
           )}
         >
-          <Layout className="w-4 h-4" />
+          <Layout className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           Carrusel
         </button>
         <button
           onClick={() => setPageMode('strategy')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-            pageMode === 'strategy'
-              ? 'bg-amber-500 text-black'
-              : 'text-zinc-400 hover:text-white'
+            'flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all',
+            pageMode === 'strategy' ? 'bg-amber-500 text-black' : 'text-zinc-400 hover:text-white'
           )}
         >
-          <Map className="w-4 h-4" />
-          Estrategia (10 carruseles)
+          <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden xs:inline">Estrategia</span>
+          <span className="xs:hidden">Estrategia</span>
+          <span className="hidden sm:inline"> (10 carruseles)</span>
         </button>
       </div>
 
@@ -524,14 +522,14 @@ export default function CarouselsPage() {
 
       {/* ── Carousel tab ── */}
       {pageMode === 'carousel' && (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
       {generating && mode === 'form' && (
         <div className="flex items-center gap-3 text-zinc-400 py-4">
           <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
           <span className="text-sm">Generando carrusel desde estrategia...</span>
         </div>
       )}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-start">
 
         {/* ══════════ LEFT ══════════ */}
         {mode === 'form' ? (
@@ -637,7 +635,7 @@ export default function CarouselsPage() {
             {/* ── Tipo de carrusel ── */}
             <div>
               <label className="text-xs text-zinc-400 mb-2 block">Tipo de carrusel</label>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {CAROUSEL_TYPES.map(({ key, label, icon: Icon, desc }) => (
                   <button
                     key={key}
@@ -660,7 +658,7 @@ export default function CarouselsPage() {
             </div>
 
             {/* ── Marca + Plataforma ── */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-zinc-400 mb-1.5 block">Marca</label>
                 <div className="flex flex-col gap-1">
@@ -694,7 +692,7 @@ export default function CarouselsPage() {
               <div className="flex gap-2">
                 {SLIDE_COUNTS.map((n) => (
                   <button key={n} onClick={() => setSlideCount(n)}
-                    className={cn('w-12 py-2 text-sm font-semibold rounded-xl border transition-colors',
+                    className={cn('flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors',
                       slideCount === n ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                         : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300')}>
                     {n}
@@ -1023,7 +1021,7 @@ export default function CarouselsPage() {
             Aún no tienes carruseles guardados. Genera uno y pulsa <strong className="text-zinc-400">Guardar</strong>.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {history.map((c) => {
               const t = CAROUSEL_THEMES[c.theme_key] ?? CAROUSEL_THEMES.dark;
               const isActive = savedId === c.id;
@@ -1074,7 +1072,7 @@ export default function CarouselsPage() {
           onClick={() => setShowCanvaGuide(false)}
         >
           <div
-            className="relative w-full max-w-3xl max-h-[80vh] bg-zinc-900 rounded-2xl border border-zinc-700 overflow-hidden shadow-2xl flex flex-col"
+            className="relative w-full max-w-3xl max-h-[90vh] bg-zinc-900 rounded-xl sm:rounded-2xl border border-zinc-700 overflow-hidden shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1099,7 +1097,7 @@ export default function CarouselsPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 transition-colors"
                 >
                   {copiedGuide ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedGuide ? 'Copiado' : 'Copiar tabla'}
+                  <span className="hidden sm:inline">{copiedGuide ? 'Copiado' : 'Copiar tabla'}</span>
                 </button>
                 <button onClick={() => setShowCanvaGuide(false)} className="text-zinc-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-zinc-800">
                   <X className="w-4 h-4" />
@@ -1113,18 +1111,18 @@ export default function CarouselsPage() {
                 <thead>
                   <tr className="text-zinc-400 border-b border-zinc-800">
                     <th className="text-left py-2 pr-3 font-medium w-8">#</th>
-                    <th className="text-left py-2 pr-3 font-medium w-20">Tipo</th>
+                    <th className="text-left py-2 pr-3 font-medium w-16 hidden sm:table-cell">Tipo</th>
                     <th className="text-left py-2 pr-3 font-medium">Titular</th>
-                    <th className="text-left py-2 pr-3 font-medium">Cuerpo</th>
+                    <th className="text-left py-2 pr-3 font-medium hidden sm:table-cell">Cuerpo</th>
                     <th className="text-left py-2 pr-3 font-medium w-8">Em.</th>
-                    <th className="text-left py-2 font-medium">Nota diseñador</th>
+                    <th className="text-left py-2 font-medium hidden md:table-cell">Nota diseñador</th>
                   </tr>
                 </thead>
                 <tbody>
                   {canvaGuide.map((s, i) => (
                     <tr key={i} className={cn('border-b border-zinc-800/50 align-top', i % 2 === 0 ? 'bg-zinc-800/20' : '')}>
                       <td className="py-2.5 pr-3 text-zinc-500 font-mono">{i + 1}</td>
-                      <td className="py-2.5 pr-3">
+                      <td className="py-2.5 pr-3 hidden sm:table-cell">
                         <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-medium', {
                           'bg-amber-500/20 text-amber-300': s.type === 'cover',
                           'bg-blue-500/20 text-blue-300': s.type === 'content',
@@ -1133,10 +1131,10 @@ export default function CarouselsPage() {
                           {s.type}
                         </span>
                       </td>
-                      <td className="py-2.5 pr-3 text-white font-medium leading-snug max-w-[180px]">{s.headline}</td>
-                      <td className="py-2.5 pr-3 text-zinc-400 leading-snug max-w-[180px]">{s.body}</td>
+                      <td className="py-2.5 pr-3 text-white font-medium leading-snug">{s.headline}</td>
+                      <td className="py-2.5 pr-3 text-zinc-400 leading-snug hidden sm:table-cell">{s.body}</td>
                       <td className="py-2.5 pr-3 text-lg">{s.emoji}</td>
-                      <td className="py-2.5 text-zinc-500 leading-snug italic">{s.canva_note ?? '—'}</td>
+                      <td className="py-2.5 text-zinc-500 leading-snug italic hidden md:table-cell">{s.canva_note ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1345,7 +1343,7 @@ function CopyReview({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <Button
           onClick={onRegenerate}
           disabled={loading || accepting}
