@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     const Innertube = await getInnertube();
     const yt = await Innertube.create({ generate_session_locally: true });
-    const info = await yt.getBasicInfo(videoId, 'WEB');
+    const info = await yt.getBasicInfo(videoId, 'TV_EMBEDDED');
 
     const title: string = info.basic_info.title ?? 'video';
     const durationSec: number = info.basic_info.duration ?? 0;
