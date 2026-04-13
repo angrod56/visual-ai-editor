@@ -88,23 +88,55 @@ async function mergeAdaptiveStreams(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getYouTubeInfo(videoId: string): Promise<any> {
   const Innertube = await getInnertube();
-  const yt = await Innertube.create({ generate_session_locally: true });
 
-  const clients = ['TV_EMBEDDED', 'IOS', 'ANDROID', 'MWEB'] as const;
+  const clients = [
+    'TV_EMBEDDED',
+    'IOS',
+    'ANDROID',
+    'TV',
+    'TV_SIMPLY',
+    'WEB_EMBEDDED_PLAYER',
+    'ANDROID_CREATOR',
+    'MWEB',
+    'WEB_CREATOR',
+  ] as const;
+
+  let lastStatus = '';
 
   for (const client of clients) {
     try {
+      // Create a fresh Innertube instance per client to avoid state pollution
+      const yt = await Innertube.create({ generate_session_locally: true });
       const info = await yt.getBasicInfo(videoId, client);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const playability = (info as any).playability_status;
+      const status: string = playability?.status ?? 'UNKNOWN';
+      const reason: string = playability?.reason ?? '';
       const formats = info.streaming_data?.formats ?? [];
       const adaptive = info.streaming_data?.adaptive_formats ?? [];
+
+      console.log(`[upload/url] ${client}: playability=${status} reason="${reason}" formats=${formats.length} adaptive=${adaptive.length}`);
+
       if (formats.length > 0 || adaptive.length > 0) {
-        console.log(`[upload/url] client ${client} → formats:${formats.length} adaptive:${adaptive.length}`);
         return { info, yt };
       }
-      console.log(`[upload/url] client ${client} returned 0 formats, trying next…`);
+
+      if (status === 'LOGIN_REQUIRED' || status === 'AGE_VERIFICATION_REQUIRED') {
+        lastStatus = `${status}: ${reason}`;
+        break; // no point trying other clients for age-restricted/private
+      }
+
+      lastStatus = status;
     } catch (e) {
-      console.warn(`[upload/url] client ${client} failed:`, e instanceof Error ? e.message : e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`[upload/url] ${client} threw: ${msg}`);
+      lastStatus = msg;
     }
+  }
+
+  if (lastStatus.includes('LOGIN_REQUIRED') || lastStatus.includes('AGE_VERIFICATION')) {
+    throw new Error('El video está restringido por edad o es privado. No se puede descargar.');
   }
 
   throw new Error('No se encontraron formatos de video. El video puede estar privado, restringido por edad o no disponible en tu región.');
